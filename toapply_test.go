@@ -1,14 +1,13 @@
 package migrate
 
 import (
-	_ "github.com/mattn/go-sqlite3"
 	. "gopkg.in/check.v1"
 )
 
 var toapplyMigrations = []*Migration{
-	&Migration{Id: "abc", Up: "", Down: ""},
-	&Migration{Id: "cde", Up: "", Down: ""},
-	&Migration{Id: "efg", Up: "", Down: ""},
+	&Migration{Id: "abc", Up: nil, Down: nil},
+	&Migration{Id: "cde", Up: nil, Down: nil},
+	&Migration{Id: "efg", Up: nil, Down: nil},
 }
 
 type ToApplyMigrateSuite struct {

@@ -2,10 +2,15 @@ package migrate
 
 import (
 	"database/sql"
+	"io"
+	"os"
+	"path"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/coopernurse/gorp"
+	"github.com/rubenv/gorp-migrate/sqlparse"
 )
 
 type MigrationDirection int
@@ -17,8 +22,8 @@ const (
 
 type Migration struct {
 	Id   string
-	Up   string
-	Down string
+	Up   []string
+	Down []string
 }
 
 type byId []*Migration
@@ -45,6 +50,66 @@ var _ MigrationSource = (*MemoryMigrationSource)(nil)
 
 func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	return m.Migrations, nil
+}
+
+// A set of migrations loaded from a directory.
+type FileMigrationSource struct {
+	Dir string
+}
+
+var _ MigrationSource = (*FileMigrationSource)(nil)
+
+func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
+	migrations := make([]*Migration, 0)
+
+	file, err := os.Open(f.Dir)
+	if err != nil {
+		return nil, err
+	}
+
+	files, err := file.Readdir(0)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, info := range files {
+		if strings.HasSuffix(info.Name(), ".sql") {
+			file, err := os.Open(path.Join(f.Dir, info.Name()))
+			if err != nil {
+				return nil, err
+			}
+
+			migration, err := ParseMigration(info.Name(), file)
+			if err != nil {
+				return nil, err
+			}
+
+			migrations = append(migrations, migration)
+		}
+	}
+
+	return migrations, nil
+}
+
+func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
+	m := &Migration{
+		Id: id,
+	}
+
+	up, err := sqlparse.SplitSQLStatements(r, true)
+	if err != nil {
+		return nil, err
+	}
+
+	down, err := sqlparse.SplitSQLStatements(r, false)
+	if err != nil {
+		return nil, err
+	}
+
+	m.Up = up
+	m.Down = down
+
+	return m, nil
 }
 
 // Execute a set of migrations
@@ -82,9 +147,11 @@ func Exec(db *gorp.DbMap, m MigrationSource) (int, error) {
 	// Apply migrations
 	applied := 0
 	for _, migration := range toApply {
-		_, err := dbMap.Exec(migration.Up)
-		if err != nil {
-			return applied, err
+		for _, stmt := range migration.Up {
+			_, err := dbMap.Exec(stmt)
+			if err != nil {
+				return applied, err
+			}
 		}
 
 		err = dbMap.Insert(&MigrationRecord{

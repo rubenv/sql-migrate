@@ -13,13 +13,13 @@ var filename = "/tmp/gorp-migrate-sqlite.db"
 var sqliteMigrations = []*Migration{
 	&Migration{
 		Id:   "123",
-		Up:   "CREATE TABLE people (id int)",
-		Down: "DROP TABLE people",
+		Up:   []string{"CREATE TABLE people (id int)"},
+		Down: []string{"DROP TABLE people"},
 	},
 	&Migration{
 		Id:   "124",
-		Up:   "ALTER TABLE people ADD COLUMN first_name text",
-		Down: "SELECT 0", // Not really supported
+		Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+		Down: []string{"SELECT 0"}, // Not really supported
 	},
 }
 
@@ -97,4 +97,20 @@ func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 	// Can use column now
 	_, err = s.DbMap.Exec("SELECT first_name FROM people")
 	c.Assert(err, IsNil)
+}
+
+func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Executes one migration
+	n, err := Exec(s.DbMap, migrations)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
 }
