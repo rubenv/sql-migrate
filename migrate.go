@@ -21,11 +21,11 @@ type Migration struct {
 	Down string
 }
 
-type ById []*Migration
+type byId []*Migration
 
-func (b ById) Len() int           { return len(b) }
-func (b ById) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
-func (b ById) Less(i, j int) bool { return b[i].Id < b[j].Id }
+func (b byId) Len() int           { return len(b) }
+func (b byId) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
+func (b byId) Less(i, j int) bool { return b[i].Id < b[j].Id }
 
 type MigrationRecord struct {
 	Id        string    `db:"id"`
@@ -67,7 +67,7 @@ func Exec(db *gorp.DbMap, m MigrationSource) (int, error) {
 	}
 
 	// Make sure migrations are sorted
-	sort.Sort(ById(migrations))
+	sort.Sort(byId(migrations))
 
 	// Find the newest applied migration
 	var record MigrationRecord
