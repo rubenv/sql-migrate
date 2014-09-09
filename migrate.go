@@ -2,8 +2,6 @@ package migrate
 
 import (
 	"database/sql"
-	"log"
-	"os"
 	"sort"
 	"time"
 
@@ -55,7 +53,7 @@ func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 func Exec(db *gorp.DbMap, m MigrationSource) (int, error) {
 	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
 	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
-	dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
+	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 
 	// Make sure we have the migrations table
 	err := dbMap.CreateTablesIfNotExists()

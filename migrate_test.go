@@ -18,7 +18,7 @@ var sqliteMigrations = []*Migration{
 	},
 	&Migration{
 		Id:   "124",
-		Up:   "ALTER TABLE people ADD COLUMN (first_name text)",
+		Up:   "ALTER TABLE people ADD COLUMN first_name text",
 		Down: "SELECT 0", // Not really supported
 	},
 }
@@ -43,7 +43,7 @@ func (s *SqliteMigrateSuite) TearDownTest(c *C) {
 
 func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
 	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[0:0],
+		Migrations: sqliteMigrations[:1],
 	}
 
 	// Executes one migration
@@ -63,7 +63,7 @@ func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
 
 func (s *SqliteMigrateSuite) TestMigrateMultiple(c *C) {
 	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[0:1],
+		Migrations: sqliteMigrations[:2],
 	}
 
 	// Executes one migration
@@ -78,7 +78,7 @@ func (s *SqliteMigrateSuite) TestMigrateMultiple(c *C) {
 
 func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[0:0],
+		Migrations: sqliteMigrations[:1],
 	}
 
 	// Executes one migration
@@ -88,7 +88,7 @@ func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 
 	// Execute a new migration
 	migrations = &MemoryMigrationSource{
-		Migrations: sqliteMigrations[0:1],
+		Migrations: sqliteMigrations[:2],
 	}
 	n, err = Exec(s.DbMap, migrations)
 	c.Assert(err, IsNil)
