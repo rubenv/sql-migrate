@@ -101,6 +101,7 @@ func Exec(db *gorp.DbMap, m MigrationSource) (int, error) {
 	return applied, nil
 }
 
+// Filter a slice of migrations into ones that should be applied.
 func ToApply(migrations []*Migration, current string, direction MigrationDirection) []*Migration {
 	var index = -1
 	for index < len(migrations)-1 && migrations[index+1].Id <= current {
