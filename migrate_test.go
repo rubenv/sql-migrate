@@ -114,3 +114,21 @@ func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(id, Equals, int64(1))
 }
+
+func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
+	migrations := &AssetMigrationSource{
+		Asset:    Asset,
+		AssetDir: AssetDir,
+		Dir:      "test-migrations",
+	}
+
+	// Executes one migration
+	n, err := Exec(s.DbMap, migrations)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+}

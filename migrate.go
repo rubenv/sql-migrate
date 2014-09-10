@@ -1,6 +1,7 @@
 package migrate
 
 import (
+	"bytes"
 	"database/sql"
 	"io"
 	"os"
@@ -91,6 +92,48 @@ func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
+// Migrations from a bindata asset set.
+type AssetMigrationSource struct {
+	// Asset should return content of file in path if exists
+	Asset func(path string) ([]byte, error)
+
+	// AssetDir should return list of files in the path
+	AssetDir func(path string) ([]string, error)
+
+	// Path in the bindata to use.
+	Dir string
+}
+
+var _ MigrationSource = (*FileMigrationSource)(nil)
+
+func (a AssetMigrationSource) FindMigrations() ([]*Migration, error) {
+	migrations := make([]*Migration, 0)
+
+	files, err := a.AssetDir(a.Dir)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, name := range files {
+		if strings.HasSuffix(name, ".sql") {
+			file, err := a.Asset(path.Join(a.Dir, name))
+			if err != nil {
+				return nil, err
+			}
+
+			migration, err := ParseMigration(name, bytes.NewReader(file))
+			if err != nil {
+				return nil, err
+			}
+
+			migrations = append(migrations, migration)
+		}
+	}
+
+	return migrations, nil
+}
+
+// Migration parsing
 func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 	m := &Migration{
 		Id: id,
