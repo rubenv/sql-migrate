@@ -104,7 +104,7 @@ type AssetMigrationSource struct {
 	Dir string
 }
 
-var _ MigrationSource = (*FileMigrationSource)(nil)
+var _ MigrationSource = (*AssetMigrationSource)(nil)
 
 func (a AssetMigrationSource) FindMigrations() ([]*Migration, error) {
 	migrations := make([]*Migration, 0)
