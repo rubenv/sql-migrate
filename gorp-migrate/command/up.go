@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/coopernurse/gorp"
-	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/rubenv/gorp-migrate"
 )
@@ -48,8 +47,6 @@ func (c *UpCommand) Run(args []string) int {
 		c.Ui.Error(fmt.Sprintf("Could not parse config: %s", err))
 		return 1
 	}
-
-	c.Ui.Output(fmt.Sprintf("%# v", pretty.Formatter(env)))
 
 	db, err := sql.Open(env.Dialect, env.DataSource)
 	if err != nil {
