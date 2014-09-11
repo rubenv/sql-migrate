@@ -66,7 +66,7 @@ func (s *SqliteMigrateSuite) TestMigrateMultiple(c *C) {
 		Migrations: sqliteMigrations[:2],
 	}
 
-	// Executes one migration
+	// Executes two migrations
 	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
@@ -104,7 +104,7 @@ func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
 		Dir: "test-migrations",
 	}
 
-	// Executes one migration
+	// Executes two migrations
 	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
@@ -122,7 +122,7 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 		Dir:      "test-migrations",
 	}
 
-	// Executes one migration
+	// Executes two migrations
 	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
