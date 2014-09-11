@@ -5,7 +5,6 @@ import (
 	"os"
 
 	"github.com/mitchellh/cli"
-	"github.com/rubenv/gorp-migrate/gorp-migrate/command"
 )
 
 func main() {
@@ -19,7 +18,7 @@ func realMain() int {
 		Args: os.Args[1:],
 		Commands: map[string]cli.CommandFactory{
 			"up": func() (cli.Command, error) {
-				return &command.UpCommand{
+				return &UpCommand{
 					Ui: ui,
 				}, nil
 			},

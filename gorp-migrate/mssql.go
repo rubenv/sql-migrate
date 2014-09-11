@@ -1,6 +1,6 @@
 // +build go1.3
 
-package command
+package main
 
 import (
 	"github.com/coopernurse/gorp"

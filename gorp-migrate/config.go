@@ -1,12 +1,23 @@
-package command
+package main
 
 import (
 	"errors"
 	"flag"
 	"io/ioutil"
 
+	"github.com/coopernurse/gorp"
 	"gopkg.in/yaml.v1"
+
+	_ "github.com/go-sql-driver/mysql"
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
+
+var dialects = map[string]gorp.Dialect{
+	"sqlite3":  gorp.SqliteDialect{},
+	"postgres": gorp.PostgresDialect{},
+	"mysql":    gorp.MySQLDialect{},
+}
 
 var ConfigFile string
 var ConfigEnvironment string
