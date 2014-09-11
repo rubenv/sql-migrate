@@ -25,6 +25,8 @@ Options:
 
   -config=config.yml   Configuration file to use.
   -env=""              Environment (defaults to first defined).
+  -limit=0             Limit the number of migrations (0 = unlimited).
+
 `
 	return strings.TrimSpace(helpText)
 }
@@ -34,8 +36,11 @@ func (c *UpCommand) Synopsis() string {
 }
 
 func (c *UpCommand) Run(args []string) int {
+	var limit int
+
 	cmdFlags := flag.NewFlagSet("up", flag.ContinueOnError)
 	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
+	cmdFlags.IntVar(&limit, "limit", 0, "Max number of migrations to apply.")
 	ConfigFlags(cmdFlags)
 
 	if err := cmdFlags.Parse(args); err != nil {
@@ -65,7 +70,7 @@ func (c *UpCommand) Run(args []string) int {
 		Dir: env.Dir,
 	}
 
-	n, err := migrate.Exec(dbmap, source, migrate.Up)
+	n, err := migrate.ExecMax(dbmap, source, migrate.Up, limit)
 	if err != nil {
 		c.Ui.Error(fmt.Sprintf("Migration failed: %s", err))
 		return 1
