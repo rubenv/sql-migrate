@@ -47,7 +47,7 @@ func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
 	}
 
 	// Executes one migration
-	n, err := Exec(s.DbMap, migrations)
+	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -56,7 +56,7 @@ func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
 	c.Assert(err, IsNil)
 
 	// Shouldn't apply migration again
-	n, err = Exec(s.DbMap, migrations)
+	n, err = Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
@@ -67,7 +67,7 @@ func (s *SqliteMigrateSuite) TestMigrateMultiple(c *C) {
 	}
 
 	// Executes one migration
-	n, err := Exec(s.DbMap, migrations)
+	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -82,7 +82,7 @@ func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 	}
 
 	// Executes one migration
-	n, err := Exec(s.DbMap, migrations)
+	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -90,7 +90,7 @@ func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 	migrations = &MemoryMigrationSource{
 		Migrations: sqliteMigrations[:2],
 	}
-	n, err = Exec(s.DbMap, migrations)
+	n, err = Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -105,7 +105,7 @@ func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
 	}
 
 	// Executes one migration
-	n, err := Exec(s.DbMap, migrations)
+	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -123,7 +123,7 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 	}
 
 	// Executes one migration
-	n, err := Exec(s.DbMap, migrations)
+	n, err := Exec(s.DbMap, migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 

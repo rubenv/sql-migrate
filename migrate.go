@@ -158,7 +158,16 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 // Execute a set of migrations
 //
 // Returns the number of applied migrations.
-func Exec(db *gorp.DbMap, m MigrationSource) (int, error) {
+func Exec(db *gorp.DbMap, m MigrationSource, dir MigrationDirection) (int, error) {
+	return ExecMax(db, m, dir, 0)
+}
+
+// Execute a set of migrations
+//
+// Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
+//
+// Returns the number of applied migrations.
+func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) (int, error) {
 	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
 	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
@@ -185,7 +194,7 @@ func Exec(db *gorp.DbMap, m MigrationSource) (int, error) {
 	}
 
 	// Figure out which of the supplied migrations has been applied.
-	toApply := ToApply(migrations, record.Id, Up)
+	toApply := ToApply(migrations, record.Id, dir)
 
 	// Apply migrations
 	applied := 0
@@ -206,6 +215,10 @@ func Exec(db *gorp.DbMap, m MigrationSource) (int, error) {
 		}
 
 		applied++
+
+		if max > 0 && applied == max {
+			break
+		}
 	}
 
 	return applied, nil
