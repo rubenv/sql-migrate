@@ -132,3 +132,19 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(id, Equals, int64(1))
 }
+
+func (s *SqliteMigrateSuite) TestMigrateMax(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Executes one migration
+	n, err := ExecMax(s.DbMap, migrations, Up, 1)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(0))
+}
