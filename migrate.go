@@ -168,37 +168,14 @@ func Exec(db *gorp.DbMap, m MigrationSource, dir MigrationDirection) (int, error
 //
 // Returns the number of applied migrations.
 func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
-	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
-	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
-
-	// Make sure we have the migrations table
-	err := dbMap.CreateTablesIfNotExists()
+	migrations, dbMap, err := PlanMigration(db, m, dir, max)
 	if err != nil {
 		return 0, err
 	}
-
-	migrations, err := m.FindMigrations()
-	if err != nil {
-		return 0, err
-	}
-
-	// Make sure migrations are sorted
-	sort.Sort(byId(migrations))
-
-	// Find the newest applied migration
-	var record MigrationRecord
-	err = dbMap.SelectOne(&record, "SELECT * FROM gorp_migrations ORDER BY id DESC LIMIT 1")
-	if err != nil && err != sql.ErrNoRows {
-		return 0, err
-	}
-
-	// Figure out which of the supplied migrations has been applied.
-	toApply := ToApply(migrations, record.Id, dir)
 
 	// Apply migrations
 	applied := 0
-	for _, migration := range toApply {
+	for _, migration := range migrations {
 		for _, stmt := range migration.Up {
 			_, err := dbMap.Exec(stmt)
 			if err != nil {
@@ -222,6 +199,43 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 	}
 
 	return applied, nil
+}
+
+// Plan a migration.
+func PlanMigration(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) ([]*Migration, *gorp.DbMap, error) {
+	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
+	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
+	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
+
+	// Make sure we have the migrations table
+	err := dbMap.CreateTablesIfNotExists()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	migrations, err := m.FindMigrations()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	// Make sure migrations are sorted
+	sort.Sort(byId(migrations))
+
+	// Find the newest applied migration
+	var record MigrationRecord
+	err = dbMap.SelectOne(&record, "SELECT * FROM gorp_migrations ORDER BY id DESC LIMIT 1")
+	if err != nil && err != sql.ErrNoRows {
+		return nil, nil, err
+	}
+
+	// Figure out which of the supplied migrations has been applied.
+	toApply := ToApply(migrations, record.Id, dir)
+	toApplyCount := len(toApply)
+	if max > 0 && max < toApplyCount {
+		toApplyCount = max
+	}
+
+	return toApply[0:toApplyCount], dbMap, nil
 }
 
 // Filter a slice of migrations into ones that should be applied.
