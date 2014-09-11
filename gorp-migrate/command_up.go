@@ -26,6 +26,7 @@ Options:
   -config=config.yml   Configuration file to use.
   -env=""              Environment (defaults to first defined).
   -limit=0             Limit the number of migrations (0 = unlimited).
+  -dryrun              Don't apply migrations, just print them.
 
 `
 	return strings.TrimSpace(helpText)
@@ -37,10 +38,12 @@ func (c *UpCommand) Synopsis() string {
 
 func (c *UpCommand) Run(args []string) int {
 	var limit int
+	var dryrun bool
 
 	cmdFlags := flag.NewFlagSet("up", flag.ContinueOnError)
 	cmdFlags.Usage = func() { c.Ui.Output(c.Help()) }
 	cmdFlags.IntVar(&limit, "limit", 0, "Max number of migrations to apply.")
+	cmdFlags.BoolVar(&dryrun, "dryrun", false, "Don't apply migrations, just print them.")
 	ConfigFlags(cmdFlags)
 
 	if err := cmdFlags.Parse(args); err != nil {
@@ -70,13 +73,29 @@ func (c *UpCommand) Run(args []string) int {
 		Dir: env.Dir,
 	}
 
-	n, err := migrate.ExecMax(dbmap, source, migrate.Up, limit)
-	if err != nil {
-		c.Ui.Error(fmt.Sprintf("Migration failed: %s", err))
-		return 1
-	}
+	if dryrun {
+		migrations, _, err := migrate.PlanMigration(dbmap, source, migrate.Up, limit)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Cannot plan migration: %s", err))
+			return 1
+		}
 
-	c.Ui.Output(fmt.Sprintf("Applied %d migrations", n))
+		for _, m := range migrations {
+			c.Ui.Output(fmt.Sprintf("==> Would apply migration %s", m.Id))
+			for _, q := range m.Queries {
+				c.Ui.Output(q)
+			}
+		}
+
+	} else {
+		n, err := migrate.ExecMax(dbmap, source, migrate.Up, limit)
+		if err != nil {
+			c.Ui.Error(fmt.Sprintf("Migration failed: %s", err))
+			return 1
+		}
+
+		c.Ui.Output(fmt.Sprintf("Applied %d migrations", n))
+	}
 
 	return 0
 }

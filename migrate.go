@@ -27,6 +27,11 @@ type Migration struct {
 	Down []string
 }
 
+type PlannedMigration struct {
+	Id      string
+	Queries []string
+}
+
 type byId []*Migration
 
 func (b byId) Len() int           { return len(b) }
@@ -176,7 +181,7 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 	// Apply migrations
 	applied := 0
 	for _, migration := range migrations {
-		for _, stmt := range migration.Up {
+		for _, stmt := range migration.Queries {
 			_, err := dbMap.Exec(stmt)
 			if err != nil {
 				return applied, err
@@ -192,17 +197,13 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 		}
 
 		applied++
-
-		if max > 0 && applied == max {
-			break
-		}
 	}
 
 	return applied, nil
 }
 
 // Plan a migration.
-func PlanMigration(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) ([]*Migration, *gorp.DbMap, error) {
+func PlanMigration(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
 	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
@@ -235,7 +236,20 @@ func PlanMigration(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, ma
 		toApplyCount = max
 	}
 
-	return toApply[0:toApplyCount], dbMap, nil
+	result := make([]*PlannedMigration, toApplyCount)
+	for k, v := range toApply[0:toApplyCount] {
+		result[k] = &PlannedMigration{
+			Id: v.Id,
+		}
+
+		if dir == Up {
+			result[k].Queries = v.Up
+		} else if dir == Down {
+			result[k].Queries = v.Down
+		}
+	}
+
+	return result, dbMap, nil
 }
 
 // Filter a slice of migrations into ones that should be applied.
