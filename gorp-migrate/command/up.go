@@ -10,11 +10,6 @@ import (
 	"github.com/kr/pretty"
 	"github.com/mitchellh/cli"
 	"github.com/rubenv/gorp-migrate"
-
-	_ "github.com/denisenkom/go-mssqldb"
-	_ "github.com/go-sql-driver/mysql"
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 type UpCommand struct {
@@ -37,14 +32,6 @@ Options:
 
 func (c *UpCommand) Synopsis() string {
 	return "Migrates the database to the most recent version available"
-}
-
-var dialects = map[string]gorp.Dialect{
-	"sqlite3":  gorp.SqliteDialect{},
-	"postgres": gorp.PostgresDialect{},
-	"mysql":    gorp.MySQLDialect{},
-	"mssql":    gorp.SqlServerDialect{},
-	//"oci8":     gorp.OracleDialect{}, // Not built-in yet
 }
 
 func (c *UpCommand) Run(args []string) int {
