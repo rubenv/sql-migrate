@@ -189,6 +189,7 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 		for _, stmt := range migration.Queries {
 			_, err := trans.Exec(stmt)
 			if err != nil {
+				trans.Rollback()
 				return applied, err
 			}
 		}
