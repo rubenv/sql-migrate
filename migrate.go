@@ -215,9 +215,7 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 
 // Plan a migration.
 func PlanMigration(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
-	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
-	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
-	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
+	dbMap := getMigrationDbMap(db)
 
 	// Make sure we have the migrations table
 	err := dbMap.CreateTablesIfNotExists()
@@ -286,6 +284,25 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	}
 
 	panic("Not possible")
+}
+
+func GetMigrationRecords(db *gorp.DbMap) ([]*MigrationRecord, error) {
+	dbMap := getMigrationDbMap(db)
+
+	var records []*MigrationRecord
+	_, err := dbMap.Select(&records, "SELECT * FROM gorp_migrations ORDER BY id ASC")
+	if err != nil {
+		return nil, err
+	}
+
+	return records, nil
+}
+
+func getMigrationDbMap(db *gorp.DbMap) *gorp.DbMap {
+	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
+	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
+	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
+	return dbMap
 }
 
 // TODO: Run migration + record insert in transaction.
