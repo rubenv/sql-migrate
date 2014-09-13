@@ -28,10 +28,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 		}
 
 		for _, m := range migrations {
-			ui.Output(fmt.Sprintf("==> Would apply migration %s", m.Id))
-			for _, q := range m.Queries {
-				ui.Output(q)
-			}
+			PrintMigration(m, dir)
 		}
 
 	} else {
@@ -48,4 +45,20 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 	}
 
 	return nil
+}
+
+func PrintMigration(m *migrate.PlannedMigration, dir migrate.MigrationDirection) {
+	if dir == migrate.Up {
+		ui.Output(fmt.Sprintf("==> Would apply migration %s (up)", m.Id))
+		for _, q := range m.Up {
+			ui.Output(q)
+		}
+	} else if dir == migrate.Down {
+		ui.Output(fmt.Sprintf("==> Would apply migration %s (down)", m.Id))
+		for _, q := range m.Down {
+			ui.Output(q)
+		}
+	} else {
+		panic("Not reached")
+	}
 }

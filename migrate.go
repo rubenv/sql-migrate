@@ -28,7 +28,7 @@ type Migration struct {
 }
 
 type PlannedMigration struct {
-	Id      string
+	*Migration
 	Queries []string
 }
 
@@ -250,7 +250,7 @@ func PlanMigration(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, ma
 	result := make([]*PlannedMigration, toApplyCount)
 	for k, v := range toApply[0:toApplyCount] {
 		result[k] = &PlannedMigration{
-			Id: v.Id,
+			Migration: v,
 		}
 
 		if dir == Up {

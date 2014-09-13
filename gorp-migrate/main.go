@@ -25,6 +25,9 @@ func realMain() int {
 			"down": func() (cli.Command, error) {
 				return &DownCommand{}, nil
 			},
+			"redo": func() (cli.Command, error) {
+				return &RedoCommand{}, nil
+			},
 		},
 		HelpFunc: cli.BasicHelpFunc("gorp-migrate"),
 		Version:  "1.0.0",

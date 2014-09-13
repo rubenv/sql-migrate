@@ -14,7 +14,7 @@ func (c *DownCommand) Help() string {
 	helpText := `
 Usage: gorp-migrate down [options] ...
 
-  Undo a database migration..
+  Undo a database migration.
 
 Options:
 
