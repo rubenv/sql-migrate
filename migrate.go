@@ -181,15 +181,20 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 	// Apply migrations
 	applied := 0
 	for _, migration := range migrations {
+		trans, err := dbMap.Begin()
+		if err != nil {
+			return applied, err
+		}
+
 		for _, stmt := range migration.Queries {
-			_, err := dbMap.Exec(stmt)
+			_, err := trans.Exec(stmt)
 			if err != nil {
 				return applied, err
 			}
 		}
 
 		if dir == Up {
-			err = dbMap.Insert(&MigrationRecord{
+			err = trans.Insert(&MigrationRecord{
 				Id:        migration.Id,
 				AppliedAt: time.Now(),
 			})
@@ -197,7 +202,7 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 				return applied, err
 			}
 		} else if dir == Down {
-			_, err := dbMap.Delete(&MigrationRecord{
+			_, err := trans.Delete(&MigrationRecord{
 				Id: migration.Id,
 			})
 			if err != nil {
@@ -205,6 +210,11 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 			}
 		} else {
 			panic("Not possible")
+		}
+
+		err = trans.Commit()
+		if err != nil {
+			return applied, err
 		}
 
 		applied++

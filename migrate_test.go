@@ -215,3 +215,27 @@ func (s *SqliteMigrateSuite) TestMigrateDownFull(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
+
+func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			sqliteMigrations[0],
+			sqliteMigrations[1],
+			&Migration{
+				Id:   "125",
+				Up:   []string{"INSERT INTO people (id, first_name) VALUES (1, 'Test')", "SELECT fail"},
+				Down: []string{}, // Not important here
+			},
+		},
+	}
+
+	// Should fail, transaction should roll back the INSERT.
+	n, err := Exec(s.DbMap, migrations, Up)
+	c.Assert(err, Not(IsNil))
+	c.Assert(n, Equals, 2)
+
+	// INSERT should be rolled back
+	count, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(count, Equals, int64(0))
+}
