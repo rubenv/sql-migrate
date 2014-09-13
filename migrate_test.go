@@ -171,4 +171,18 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	id, err = s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
 	c.Assert(err, IsNil)
 	c.Assert(id, Equals, int64(0))
+
+	// Remove the table.
+	n, err = ExecMax(s.DbMap, migrations, Down, 1)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+
+	// Cannot query it anymore
+	_, err = s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+	c.Assert(err, Not(IsNil))
+
+	// Nothing left to do.
+	n, err = ExecMax(s.DbMap, migrations, Down, 1)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 0)
 }
