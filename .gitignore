@@ -1,2 +1,4 @@
 .*.swp
 *.test
+
+/gorp-migrate/test.db
