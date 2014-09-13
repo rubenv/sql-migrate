@@ -188,12 +188,23 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 			}
 		}
 
-		err = dbMap.Insert(&MigrationRecord{
-			Id:        migration.Id,
-			AppliedAt: time.Now(),
-		})
-		if err != nil {
-			return applied, err
+		if dir == Up {
+			err = dbMap.Insert(&MigrationRecord{
+				Id:        migration.Id,
+				AppliedAt: time.Now(),
+			})
+			if err != nil {
+				return applied, err
+			}
+		} else if dir == Down {
+			_, err := dbMap.Delete(&MigrationRecord{
+				Id: migration.Id,
+			})
+			if err != nil {
+				return applied, err
+			}
+		} else {
+			panic("Not possible")
 		}
 
 		applied++
@@ -258,8 +269,23 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	for index < len(migrations)-1 && migrations[index+1].Id <= current {
 		index++
 	}
-	toApply := migrations[index+1:]
-	return toApply
+
+	if direction == Up {
+		return migrations[index+1:]
+	} else if direction == Down {
+		if index == -1 {
+			return []*Migration{}
+		}
+
+		// Add in reverse order
+		toApply := make([]*Migration, index+1)
+		for i := 0; i < index+1; i++ {
+			toApply[index-i] = migrations[i]
+		}
+		return toApply
+	}
+
+	panic("Not possible")
 }
 
 // TODO: Run migration + record insert in transaction.

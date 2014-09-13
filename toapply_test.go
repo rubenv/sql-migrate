@@ -1,8 +1,6 @@
 package migrate
 
-import (
-	. "gopkg.in/check.v1"
-)
+import . "gopkg.in/check.v1"
 
 var toapplyMigrations = []*Migration{
 	&Migration{Id: "abc", Up: nil, Down: nil},
@@ -42,4 +40,11 @@ func (s *ToApplyMigrateSuite) TestGetDone(c *C) {
 
 	toApply = ToApply(toapplyMigrations, "zzz", Up)
 	c.Assert(toApply, HasLen, 0)
+}
+
+func (s *ToApplyMigrateSuite) TestDownCde(c *C) {
+	toApply := ToApply(toapplyMigrations, "cde", Down)
+	c.Assert(toApply, HasLen, 2)
+	c.Assert(toApply[0], Equals, toapplyMigrations[1])
+	c.Assert(toApply[1], Equals, toapplyMigrations[0])
 }

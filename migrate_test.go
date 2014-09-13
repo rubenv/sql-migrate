@@ -143,8 +143,32 @@ func (s *SqliteMigrateSuite) TestMigrateMax(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
-	// Has data
 	id, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(0))
+}
+
+func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	n, err := Exec(s.DbMap, migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+
+	// Undo the last one
+	n, err = ExecMax(s.DbMap, migrations, Down, 1)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+
+	// No more data
+	id, err = s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
 	c.Assert(err, IsNil)
 	c.Assert(id, Equals, int64(0))
 }
