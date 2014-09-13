@@ -23,7 +23,7 @@ Usage: gorp-migrate status [options] ...
 Options:
 
   -config=config.yml   Configuration file to use.
-  -env=""              Environment (defaults to first defined).
+  -env="development"   Environment.
 
 `
 	return strings.TrimSpace(helpText)

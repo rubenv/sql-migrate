@@ -19,7 +19,7 @@ Usage: gorp-migrate up [options] ...
 Options:
 
   -config=config.yml   Configuration file to use.
-  -env=""              Environment (defaults to first defined).
+  -env="development"   Environment.
   -limit=0             Limit the number of migrations (0 = unlimited).
   -dryrun              Don't apply migrations, just print them.
 

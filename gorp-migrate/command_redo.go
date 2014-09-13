@@ -20,7 +20,7 @@ Usage: gorp-migrate redo [options] ...
 Options:
 
   -config=config.yml   Configuration file to use.
-  -env=""              Environment (defaults to first defined).
+  -env="development"   Environment.
   -dryrun              Don't apply migrations, just print them.
 
 `
