@@ -186,3 +186,32 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
+
+func (s *SqliteMigrateSuite) TestMigrateDownFull(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	n, err := Exec(s.DbMap, migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+
+	// Undo the last one
+	n, err = Exec(s.DbMap, migrations, Down)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Cannot query it anymore
+	_, err = s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+	c.Assert(err, Not(IsNil))
+
+	// Nothing left to do.
+	n, err = Exec(s.DbMap, migrations, Down)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 0)
+}
