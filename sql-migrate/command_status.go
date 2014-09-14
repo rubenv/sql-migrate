@@ -22,8 +22,8 @@ Usage: sql-migrate status [options] ...
 
 Options:
 
-  -config=config.yml   Configuration file to use.
-  -env="development"   Environment.
+  -config=dbconfig.yml   Configuration file to use.
+  -env="development"     Environment.
 
 `
 	return strings.TrimSpace(helpText)

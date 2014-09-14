@@ -18,10 +18,10 @@ Usage: sql-migrate up [options] ...
 
 Options:
 
-  -config=config.yml   Configuration file to use.
-  -env="development"   Environment.
-  -limit=0             Limit the number of migrations (0 = unlimited).
-  -dryrun              Don't apply migrations, just print them.
+  -config=dbconfig.yml   Configuration file to use.
+  -env="development"     Environment.
+  -limit=0               Limit the number of migrations (0 = unlimited).
+  -dryrun                Don't apply migrations, just print them.
 
 `
 	return strings.TrimSpace(helpText)
