@@ -9,7 +9,7 @@ import (
 	. "gopkg.in/check.v1"
 )
 
-var filename = "/tmp/gorp-migrate-sqlite.db"
+var filename = "/tmp/sql-migrate-sqlite.db"
 var sqliteMigrations = []*Migration{
 	&Migration{
 		Id:   "123",

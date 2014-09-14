@@ -4,7 +4,7 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/rubenv/gorp-migrate"
+	"github.com/rubenv/sql-migrate"
 )
 
 type DownCommand struct {
