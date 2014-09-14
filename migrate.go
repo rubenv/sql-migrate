@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/coopernurse/gorp"
-	"github.com/rubenv/gorp-migrate/sqlparse"
+	"github.com/rubenv/sql-migrate/sqlparse"
 )
 
 type MigrationDirection int

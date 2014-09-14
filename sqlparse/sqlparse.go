@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-const sqlCmdPrefix = "-- +gorp "
+const sqlCmdPrefix = "-- +migrate "
 
 // Checks the line to see if the line has a statement-ending semicolon
 // or if the line contains a double-dash comment.
@@ -63,7 +63,7 @@ func SplitSQLStatements(r io.ReadSeeker, direction bool) ([]string, error) {
 
 		line := scanner.Text()
 
-		// handle any gorp-specific commands
+		// handle any migrate-specific commands
 		if strings.HasPrefix(line, sqlCmdPrefix) {
 			cmd := strings.TrimSpace(line[len(sqlCmdPrefix):])
 			switch cmd {
@@ -116,12 +116,12 @@ func SplitSQLStatements(r io.ReadSeeker, direction bool) ([]string, error) {
 
 	// diagnose likely migration script errors
 	if ignoreSemicolons {
-		return nil, errors.New("ERROR: saw '-- +gorp StatementBegin' with no matching '-- +gorp StatementEnd'")
+		return nil, errors.New("ERROR: saw '-- +migrate StatementBegin' with no matching '-- +migrate StatementEnd'")
 	}
 
 	if upSections == 0 && downSections == 0 {
 		return nil, errors.New(`ERROR: no Up/Down annotations found, so no statements were executed.
-			See https://github.com/rubenv/gorp-migrate for details.`)
+			See https://github.com/rubenv/sql-migrate for details.`)
 	}
 
 	return stmts, nil

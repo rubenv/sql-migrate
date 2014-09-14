@@ -13,7 +13,7 @@ type RedoCommand struct {
 
 func (c *RedoCommand) Help() string {
 	helpText := `
-Usage: gorp-migrate redo [options] ...
+Usage: sql-migrate redo [options] ...
 
   Reapply the last migration.
 

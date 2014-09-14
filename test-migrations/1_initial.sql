@@ -1,8 +1,8 @@
--- +gorp Up
+-- +migrate Up
 -- SQL in section 'Up' is executed when this migration is applied
 CREATE TABLE people (id int);
 
 
--- +gorp Down
+-- +migrate Down
 -- SQL section 'Down' is executed when this migration is rolled back
 DROP TABLE people;

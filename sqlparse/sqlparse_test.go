@@ -90,14 +90,14 @@ func (s *SqlParseSuite) TestSplitStatements(c *C) {
 	}
 }
 
-var functxt = `-- +gorp Up
+var functxt = `-- +migrate Up
 CREATE TABLE IF NOT EXISTS histories (
   id                BIGSERIAL  PRIMARY KEY,
   current_value     varchar(2000) NOT NULL,
   created_at      timestamp with time zone  NOT NULL
 );
 
--- +gorp StatementBegin
+-- +migrate StatementBegin
 CREATE OR REPLACE FUNCTION histories_partition_creation( DATE, DATE )
 returns void AS $$
 DECLARE
@@ -118,15 +118,15 @@ BEGIN
 END;         -- FUNCTION END
 $$
 language plpgsql;
--- +gorp StatementEnd
+-- +migrate StatementEnd
 
--- +gorp Down
+-- +migrate Down
 drop function histories_partition_creation(DATE, DATE);
 drop TABLE histories;
 `
 
 // test multiple up/down transitions in a single script
-var multitxt = `-- +gorp Up
+var multitxt = `-- +migrate Up
 CREATE TABLE post (
     id int NOT NULL,
     title text,
@@ -134,10 +134,10 @@ CREATE TABLE post (
     PRIMARY KEY(id)
 );
 
--- +gorp Down
+-- +migrate Down
 DROP TABLE post;
 
--- +gorp Up
+-- +migrate Up
 CREATE TABLE fancier_post (
     id int NOT NULL,
     title text,
@@ -146,6 +146,6 @@ CREATE TABLE fancier_post (
     PRIMARY KEY(id)
 );
 
--- +gorp Down
+-- +migrate Down
 DROP TABLE fancier_post;
 `

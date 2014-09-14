@@ -16,7 +16,7 @@ type StatusCommand struct {
 
 func (c *StatusCommand) Help() string {
 	helpText := `
-Usage: gorp-migrate status [options] ...
+Usage: sql-migrate status [options] ...
 
   Show migration status.
 

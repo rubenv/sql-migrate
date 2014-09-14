@@ -32,7 +32,7 @@ func realMain() int {
 				return &StatusCommand{}, nil
 			},
 		},
-		HelpFunc: cli.BasicHelpFunc("gorp-migrate"),
+		HelpFunc: cli.BasicHelpFunc("sql-migrate"),
 		Version:  "1.0.0",
 	}
 
