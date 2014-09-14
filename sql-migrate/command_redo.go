@@ -49,7 +49,7 @@ func (c *RedoCommand) Run(args []string) int {
 		return 1
 	}
 
-	dbmap, err := GetConnection(env)
+	db, dialect, err := GetConnection(env)
 	if err != nil {
 		ui.Error(err.Error())
 		return 1
@@ -59,7 +59,7 @@ func (c *RedoCommand) Run(args []string) int {
 		Dir: env.Dir,
 	}
 
-	migrations, _, err := migrate.PlanMigration(dbmap, source, migrate.Down, 1)
+	migrations, _, err := migrate.PlanMigration(db, dialect, source, migrate.Down, 1)
 	if len(migrations) == 0 {
 		ui.Output("Nothing to do!")
 		return 0
@@ -69,13 +69,13 @@ func (c *RedoCommand) Run(args []string) int {
 		PrintMigration(migrations[0], migrate.Down)
 		PrintMigration(migrations[0], migrate.Up)
 	} else {
-		_, err := migrate.ExecMax(dbmap, source, migrate.Down, 1)
+		_, err := migrate.ExecMax(db, dialect, source, migrate.Down, 1)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Migration (down) failed: %s", err))
 			return 1
 		}
 
-		_, err = migrate.ExecMax(dbmap, source, migrate.Up, 1)
+		_, err = migrate.ExecMax(db, dialect, source, migrate.Up, 1)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Migration (up) failed: %s", err))
 			return 1

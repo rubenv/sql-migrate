@@ -48,7 +48,7 @@ func (c *StatusCommand) Run(args []string) int {
 		return 1
 	}
 
-	db, err := GetConnection(env)
+	db, dialect, err := GetConnection(env)
 	if err != nil {
 		ui.Error(err.Error())
 		return 1
@@ -63,7 +63,7 @@ func (c *StatusCommand) Run(args []string) int {
 		return 1
 	}
 
-	records, err := migrate.GetMigrationRecords(db)
+	records, err := migrate.GetMigrationRecords(db, dialect)
 	if err != nil {
 		ui.Error(err.Error())
 		return 1

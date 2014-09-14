@@ -12,7 +12,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 		return fmt.Errorf("Could not parse config: %s", err)
 	}
 
-	dbmap, err := GetConnection(env)
+	db, dialect, err := GetConnection(env)
 	if err != nil {
 		return err
 	}
@@ -22,7 +22,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 	}
 
 	if dryrun {
-		migrations, _, err := migrate.PlanMigration(dbmap, source, dir, limit)
+		migrations, _, err := migrate.PlanMigration(db, dialect, source, dir, limit)
 		if err != nil {
 			return fmt.Errorf("Cannot plan migration: %s", err)
 		}
@@ -32,7 +32,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 		}
 
 	} else {
-		n, err := migrate.ExecMax(dbmap, source, dir, limit)
+		n, err := migrate.ExecMax(db, dialect, source, dir, limit)
 		if err != nil {
 			return fmt.Errorf("Migration failed: %s", err)
 		}

@@ -76,17 +76,17 @@ func GetEnvironment() (*Environment, error) {
 	return env, nil
 }
 
-func GetConnection(env *Environment) (*gorp.DbMap, error) {
+func GetConnection(env *Environment) (*sql.DB, string, error) {
 	db, err := sql.Open(env.Dialect, env.DataSource)
 	if err != nil {
-		return nil, fmt.Errorf("Cannot connect to database: %s", err)
+		return nil, "", fmt.Errorf("Cannot connect to database: %s", err)
 	}
 
-	dialect, exists := dialects[env.Dialect]
+	// Make sure we only accept dialects that were compiled in.
+	_, exists := dialects[env.Dialect]
 	if !exists {
-		return nil, fmt.Errorf("Unsupported dialect: %s", env.Dialect)
+		return nil, "", fmt.Errorf("Unsupported dialect: %s", env.Dialect)
 	}
 
-	dbmap := &gorp.DbMap{Db: db, Dialect: dialect}
-	return dbmap, nil
+	return db, env.Dialect, nil
 }

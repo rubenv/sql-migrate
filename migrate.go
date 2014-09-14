@@ -3,6 +3,7 @@ package migrate
 import (
 	"bytes"
 	"database/sql"
+	"fmt"
 	"io"
 	"os"
 	"path"
@@ -41,6 +42,14 @@ func (b byId) Less(i, j int) bool { return b[i].Id < b[j].Id }
 type MigrationRecord struct {
 	Id        string    `db:"id"`
 	AppliedAt time.Time `db:"applied_at"`
+}
+
+var MigrationDialects = map[string]gorp.Dialect{
+	"sqlite3":  gorp.SqliteDialect{},
+	"postgres": gorp.PostgresDialect{},
+	"mysql":    gorp.MySQLDialect{},
+	"mssql":    gorp.SqlServerDialect{},
+	"oci8":     gorp.OracleDialect{},
 }
 
 type MigrationSource interface {
@@ -163,8 +172,8 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 // Execute a set of migrations
 //
 // Returns the number of applied migrations.
-func Exec(db *gorp.DbMap, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ExecMax(db, m, dir, 0)
+func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
+	return ExecMax(db, dialect, m, dir, 0)
 }
 
 // Execute a set of migrations
@@ -172,8 +181,8 @@ func Exec(db *gorp.DbMap, m MigrationSource, dir MigrationDirection) (int, error
 // Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
 //
 // Returns the number of applied migrations.
-func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	migrations, dbMap, err := PlanMigration(db, m, dir, max)
+func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
 		return 0, err
 	}
@@ -225,11 +234,14 @@ func ExecMax(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int)
 }
 
 // Plan a migration.
-func PlanMigration(db *gorp.DbMap, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
-	dbMap := getMigrationDbMap(db)
+func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
+	dbMap, err := getMigrationDbMap(db, dialect)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	// Make sure we have the migrations table
-	err := dbMap.CreateTablesIfNotExists()
+	err = dbMap.CreateTablesIfNotExists()
 	if err != nil {
 		return nil, nil, err
 	}
@@ -297,11 +309,14 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	panic("Not possible")
 }
 
-func GetMigrationRecords(db *gorp.DbMap) ([]*MigrationRecord, error) {
-	dbMap := getMigrationDbMap(db)
+func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error) {
+	dbMap, err := getMigrationDbMap(db, dialect)
+	if err != nil {
+		return nil, err
+	}
 
 	var records []*MigrationRecord
-	_, err := dbMap.Select(&records, "SELECT * FROM gorp_migrations ORDER BY id ASC")
+	_, err = dbMap.Select(&records, "SELECT * FROM gorp_migrations ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -309,11 +324,16 @@ func GetMigrationRecords(db *gorp.DbMap) ([]*MigrationRecord, error) {
 	return records, nil
 }
 
-func getMigrationDbMap(db *gorp.DbMap) *gorp.DbMap {
-	dbMap := &gorp.DbMap{Db: db.Db, Dialect: db.Dialect}
+func getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
+	d, ok := MigrationDialects[dialect]
+	if !ok {
+		return nil, fmt.Errorf("Unknown dialect: %s", dialect)
+	}
+
+	dbMap := &gorp.DbMap{Db: db, Dialect: d}
 	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
-	return dbMap
+	return dbMap, nil
 }
 
 // TODO: Run migration + record insert in transaction.
