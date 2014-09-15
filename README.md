@@ -67,6 +67,22 @@ Options:
   -dryrun              Don't apply migrations, just print them.
 ```
 
+The `up` command applies all available migrations. By contrast, `down` will only apply one migration by default. This behavior can be changed for both by using the `-limit` parameter.
+
+The `redo` command will unapply the last migration and reapply it. This is useful during development, when you're writing migrations.
+
+Use the `status` command to see the state of the applied migrations:
+
+```bash
+$ sql-migrate status
++---------------+-----------------------------------------+
+|   MIGRATION   |                 APPLIED                 |
++---------------+-----------------------------------------+
+| 1_initial.sql | 2014-09-13 08:19:06.788354925 +0000 UTC |
+| 2_record.sql  | no                                      |
++---------------+-----------------------------------------+
+```
+
 ### As a library
 Import sql-migrate into your application:
 
