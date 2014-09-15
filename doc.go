@@ -12,6 +12,12 @@ Key features:
 	* Up/down migrations to allow rollback
 	* Supports multiple database types in one project
 
+Installation
+
+To install the library and command line program, use the following:
+
+	go get github.com/rubenv/sql-migrate/...
+
 Command-line tool
 
 The main command is called sql-migrate.
