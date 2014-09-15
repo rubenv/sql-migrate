@@ -51,13 +51,91 @@ production:
 
 The environment that will be used can be specified with the `-env` flag (defaults to `development`).
 
+Use the `--help` flag in combination with any of the commands to get an overview of its usage:
+
+```
+$ sql-migrate up --help
+Usage: sql-migrate up [options] ...
+
+  Migrates the database to the most recent version available.
+
+Options:
+
+  -config=config.yml   Configuration file to use.
+  -env="development"   Environment.
+  -limit=0             Limit the number of migrations (0 = unlimited).
+  -dryrun              Don't apply migrations, just print them.
+```
+
 ### As a library
-TODO
+Import sql-migrate into your application:
+
+```go
+import "github.com/rubenv/sql-migrate"
+```
+
+Set up a source of migrations, this can be from memory, from a set of files or from bindata (more on that later):
+
+```go
+// Hardcoded strings in memory:
+migrations := &migrate.MemoryMigrationSource{
+    Migrations: []*migrate.Migration{
+        &migrate.Migration{
+            Id:   "123",
+            Up:   []string{"CREATE TABLE people (id int)"},
+            Down: []string{"DROP TABLE people"},
+        },
+    },
+}
+
+// OR: Read migrations from a folder:
+migrations := &migrate.FileMigrationSource{
+    Dir: "db/migrations",
+}
+
+// OR: Use migrations from bindata:
+migrations := &migrate.AssetMigrationSource{
+    Asset:    Asset,
+    AssetDir: AssetDir,
+    Dir:      "migrations",
+}
+```
+
+Then use the `Exec` function to upgrade your database:
+
+```go
+db, err := sql.Open("sqlite3", filename)
+if err != nil {
+    // Handle errors!
+}
+
+n, err := Exec(db, "sqlite3", migrations, Up)
+if err != nil {
+    // Handle errors!
+}
+fmt.Printf("Applied %d migrations!\n", n)
+```
+
+Note that `n` can be greater than `0` even if there is an error: any migration that succeeded will remain applied even if a later one fails.
+
+Check [the GoDoc reference](https://godoc.org/github.com/rubenv/sql-migrate) for the full documentation.
 
 ## Writing migrations
+TODO
 
 ## Embedding migrations with [bindata](https://github.com/jteeuwen/go-bindata)
 TODO
+
+## Extending
+Adding a new migration source means implementing `MigrationSource`.
+
+```go
+type MigrationSource interface {
+    FindMigrations() ([]*Migration, error)
+}
+```
+
+No specific ordering is needed in the resulting slice of migrations: they will get sorted by the `Id` field afterwards.
 
 ## License 
 
