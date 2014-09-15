@@ -121,7 +121,45 @@ Note that `n` can be greater than `0` even if there is an error: any migration t
 Check [the GoDoc reference](https://godoc.org/github.com/rubenv/sql-migrate) for the full documentation.
 
 ## Writing migrations
-TODO
+Migrations are defined in SQL files, which contain a set of SQL statements. Special comments are used to distinguish up and down migrations.
+
+```sql
+-- +migrate Up
+-- SQL in section 'Up' is executed when this migration is applied
+CREATE TABLE people (id int);
+
+
+-- +migrate Down
+-- SQL section 'Down' is executed when this migration is rolled back
+DROP TABLE people;
+```
+
+You can put multiple statements in each block, as long as you end them with a semicolon (`;`).
+
+If you have complex statements which contain semicolons, use `StatementBegin` and `StatementEnd` to indicate boundaries:
+
+```sql
+-- +migrate Up
+CREATE TABLE people (id int);
+
+-- +migrate StatementBegin
+CREATE OR REPLACE FUNCTION do_something()
+returns void AS $$
+DECLARE
+  create_query text;
+BEGIN
+  -- Do something here
+END;
+$$
+language plpgsql;
+-- +migrate StatementEnd
+
+-- +migrate Down
+DROP FUNCTION do_something();
+DROP TABLE people;
+```
+
+The order in which migrations are applied is defined through the filename: sql-migrate will sort migrations based on their name. It's recommended to use an increasing version number or a timestamp as the first part of the filename.
 
 ## Embedding migrations with [bindata](https://github.com/jteeuwen/go-bindata)
 If you like your Go applications self-contained (that is: a single binary): use [bindata](https://github.com/jteeuwen/go-bindata) to embed the migration files.
