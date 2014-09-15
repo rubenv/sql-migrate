@@ -124,7 +124,31 @@ Check [the GoDoc reference](https://godoc.org/github.com/rubenv/sql-migrate) for
 TODO
 
 ## Embedding migrations with [bindata](https://github.com/jteeuwen/go-bindata)
-TODO
+If you like your Go applications self-contained (that is: a single binary): use [bindata](https://github.com/jteeuwen/go-bindata) to embed the migration files.
+
+Just write your migration files as usual, as a set of SQL files in a folder.
+
+Then use bindata to generate a `.go` file with the migrations embedded:
+
+```bash
+go-bindata -pkg myapp -o bindata.go db/migrations/
+```
+
+The resulting `bindata.go` file will contain your migrations. Remember to regenerate your `bindata.go` file whenever you add/modify a migration (`go generate` will help here, once it arrives).
+
+Use the `AssetMigrationSource` in your application to find the migrations:
+
+```go
+migrations := &migrate.AssetMigrationSource{
+    Asset:    Asset,
+    AssetDir: AssetDir,
+    Dir:      "db/migrations",
+}
+```
+
+Both `Asset` and `AssetDir` are functions provided by bindata.
+
+Then proceed as usual.
 
 ## Extending
 Adding a new migration source means implementing `MigrationSource`.
