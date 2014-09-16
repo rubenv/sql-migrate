@@ -111,7 +111,7 @@ Then use the Exec function to upgrade your database:
 		// Handle errors!
 	}
 
-	n, err := Exec(db, "sqlite3", migrations, Up)
+	n, err := migrate.Exec(db, "sqlite3", migrations, migrate.Up)
 	if err != nil {
 		// Handle errors!
 	}
