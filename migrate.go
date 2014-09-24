@@ -64,6 +64,9 @@ type MemoryMigrationSource struct {
 var _ MigrationSource = (*MemoryMigrationSource)(nil)
 
 func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
+	// Make sure migrations are sorted
+	sort.Sort(byId(m.Migrations))
+
 	return m.Migrations, nil
 }
 
@@ -102,6 +105,9 @@ func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
 			migrations = append(migrations, migration)
 		}
 	}
+
+	// Make sure migrations are sorted
+	sort.Sort(byId(migrations))
 
 	return migrations, nil
 }
@@ -143,6 +149,9 @@ func (a AssetMigrationSource) FindMigrations() ([]*Migration, error) {
 			migrations = append(migrations, migration)
 		}
 	}
+
+	// Make sure migrations are sorted
+	sort.Sort(byId(migrations))
 
 	return migrations, nil
 }
@@ -250,9 +259,6 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	if err != nil {
 		return nil, nil, err
 	}
-
-	// Make sure migrations are sorted
-	sort.Sort(byId(migrations))
 
 	// Find the newest applied migration
 	var record MigrationRecord
