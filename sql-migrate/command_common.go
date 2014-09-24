@@ -30,7 +30,6 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 		for _, m := range migrations {
 			PrintMigration(m, dir)
 		}
-
 	} else {
 		n, err := migrate.ExecMax(db, dialect, source, dir, limit)
 		if err != nil {
