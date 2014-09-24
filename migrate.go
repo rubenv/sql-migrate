@@ -53,6 +53,9 @@ var MigrationDialects = map[string]gorp.Dialect{
 }
 
 type MigrationSource interface {
+	// Finds the migrations.
+	//
+	// The resulting slice of migrations should be sorted by Id.
 	FindMigrations() ([]*Migration, error)
 }
 
