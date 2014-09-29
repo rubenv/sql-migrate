@@ -2,7 +2,8 @@
 
 set -ex
 
-export PATH=$PATH:`go env GOPATH`/bin
+# Tweak PATH for Travis
+export PATH=$PATH:$HOME/gopath/bin
 
 # TODO: Command-line tool tests here
 sql-migrate --help
