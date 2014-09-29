@@ -6,4 +6,4 @@ set -ex
 export PATH=$PATH:$HOME/gopath/bin
 
 # TODO: Command-line tool tests here
-sql-migrate --help
+#sql-migrate up
