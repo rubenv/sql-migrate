@@ -3,7 +3,6 @@ package migrate
 import (
 	"bytes"
 	"database/sql"
-	"flag"
 	"fmt"
 	"io"
 	"os"
@@ -23,12 +22,7 @@ const (
 	Down
 )
 
-var tableName string
-
-func init() {
-	flag.StringVar(&tableName, "table", "gorp_migrations", "Migration table name. Defaults to gorp_migrations.")
-	flag.Parse()
-}
+const tableName = "gorp_migrations"
 
 type Migration struct {
 	Id   string
