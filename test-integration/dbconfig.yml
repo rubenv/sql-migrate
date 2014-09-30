@@ -5,5 +5,5 @@ postgres:
 
 mysql:
     dialect: mysql
-    datasource: /test?parseTime=true
+    datasource: root@/test
     dir: test-migrations
