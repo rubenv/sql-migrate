@@ -5,4 +5,8 @@ export PATH=$PATH:$HOME/gopath/bin
 
 set -ex
 
-sql-migrate status -config=test-integration/dbconfig.yml -env postgres
+PG_OPTIONS="-config=test-integration/dbconfig.yml -env postgres"
+sql-migrate status $PG_OPTIONS
+sql-migrate up $PG_OPTIONS
+sql-migrate down $PG_OPTIONS
+sql-migrate redo $PG_OPTIONS
