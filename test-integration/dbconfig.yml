@@ -2,3 +2,8 @@ postgres:
     dialect: postgres
     datasource: dbname=test sslmode=disable
     dir: test-migrations
+
+mysql:
+    dialect: mysql
+    datasource: /test
+    dir: test-migrations
