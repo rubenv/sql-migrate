@@ -10,3 +10,4 @@ sql-migrate status $PG_OPTIONS
 sql-migrate up $PG_OPTIONS
 sql-migrate down $PG_OPTIONS
 sql-migrate redo $PG_OPTIONS
+sql-migrate status $PG_OPTIONS
