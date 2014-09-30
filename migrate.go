@@ -3,6 +3,7 @@ package migrate
 import (
 	"bytes"
 	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -333,6 +334,22 @@ func getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
 		return nil, fmt.Errorf("Unknown dialect: %s", dialect)
 	}
 
+	// When using the mysql driver, make sure that the parseTime option is
+	// configured, otherwise it won't map time columns to time.Time. See
+	// https://github.com/rubenv/sql-migrate/issues/2
+	if dialect == "mysql" {
+		var out *time.Time
+		err := db.QueryRow("SELECT NOW()").Scan(&out)
+		if err != nil {
+			if err.Error() == "sql: Scan error on column index 0: unsupported driver -> Scan pair: []uint8 -> *time.Time" {
+				return nil, errors.New("Cannot parse dates. Make sure that the parseTime option is supplied to your database connection. Check https://github.com/go-sql-driver/mysql#parsetime for more info.")
+			} else {
+				return nil, err
+			}
+		}
+	}
+
+	// Create migration database map
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
 	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
