@@ -213,7 +213,7 @@ type MigrationSource interface {
 }
 ```
 
-No specific ordering is needed in the resulting slice of migrations: they will get sorted by the `Id` field afterwards.
+The resulting slice of migrations will be executed in the given order, so it should usually be sorted by the `Id` field.
 
 ## License 
 
