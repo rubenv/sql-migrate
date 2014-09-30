@@ -20,3 +20,4 @@ script:
     - go test -v ./...
     - bash test-integration/postgres.sh
     - bash test-integration/mysql.sh
+    - bash test-integration/mysql-flag.sh
