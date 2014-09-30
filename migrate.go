@@ -252,12 +252,6 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 		return nil, nil, err
 	}
 
-	// Make sure we have the migrations table
-	err = dbMap.CreateTablesIfNotExists()
-	if err != nil {
-		return nil, nil, err
-	}
-
 	migrations, err := m.FindMigrations()
 	if err != nil {
 		return nil, nil, err
@@ -342,6 +336,12 @@ func getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
 	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
+
+	err := dbMap.CreateTablesIfNotExists()
+	if err != nil {
+		return nil, err
+	}
+
 	return dbMap, nil
 }
 
