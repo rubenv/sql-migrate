@@ -12,3 +12,9 @@ mysql_noflag:
     dialect: mysql
     datasource: root@/test
     dir: test-migrations
+
+sqlite:
+    dialect: sqlite3
+    datasource: test.db
+    dir: test-migrations
+    table: migrations
