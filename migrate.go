@@ -23,6 +23,14 @@ const (
 	Down
 )
 
+var tableName = "gorp_migrations"
+
+func SetTable(name string) {
+	if name != "" {
+		tableName = name
+	}
+}
+
 type Migration struct {
 	Id   string
 	Up   []string
@@ -260,7 +268,8 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 
 	// Find the newest applied migration
 	var record MigrationRecord
-	err = dbMap.SelectOne(&record, "SELECT * FROM gorp_migrations ORDER BY id DESC LIMIT 1")
+	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id DESC LIMIT 1", tableName)
+	err = dbMap.SelectOne(&record, query)
 	if err != nil && err != sql.ErrNoRows {
 		return nil, nil, err
 	}
@@ -320,7 +329,8 @@ func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error)
 	}
 
 	var records []*MigrationRecord
-	_, err = dbMap.Select(&records, "SELECT * FROM gorp_migrations ORDER BY id ASC")
+	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", tableName)
+	_, err = dbMap.Select(&records, query)
 	if err != nil {
 		return nil, err
 	}
@@ -354,7 +364,7 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 
 	// Create migration database map
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
-	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
+	dbMap.AddTableWithName(MigrationRecord{}, tableName).SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 
 	err := dbMap.CreateTablesIfNotExists()

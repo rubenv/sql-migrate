@@ -17,6 +17,8 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 		return err
 	}
 
+	migrate.SetTable(env.TableName)
+
 	source := migrate.FileMigrationSource{
 		Dir: env.Dir,
 	}
