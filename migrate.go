@@ -25,6 +25,9 @@ const (
 
 var tableName = "gorp_migrations"
 
+// Set the name of the table used to store migration info.
+//
+// Should be called before any other call such as (Exec, ExecMax, ...).
 func SetTable(name string) {
 	if name != "" {
 		tableName = name
