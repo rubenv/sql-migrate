@@ -33,6 +33,7 @@ type Environment struct {
 	Dialect    string `yaml:"dialect"`
 	DataSource string `yaml:"datasource"`
 	Dir        string `yaml:"dir"`
+	TableName  string `yaml:"table"`
 }
 
 func ReadConfig() (map[string]*Environment, error) {
