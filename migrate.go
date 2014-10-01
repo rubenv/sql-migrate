@@ -22,15 +22,6 @@ const (
 	Down
 )
 
-var tableName string
-
-func init() {
-	tableName = os.Getenv("MIGRATION_TABLE")
-	if tableName == "" {
-		tableName = "gorp_migrations"
-	}
-}
-
 type Migration struct {
 	Id   string
 	Up   []string
@@ -274,8 +265,7 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 
 	// Find the newest applied migration
 	var record MigrationRecord
-	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id DESC LIMIT 1", tableName)
-	err = dbMap.SelectOne(&record, query)
+	err = dbMap.SelectOne(&record, "SELECT * FROM gorp_migrations ORDER BY id DESC LIMIT 1")
 	if err != nil && err != sql.ErrNoRows {
 		return nil, nil, err
 	}
@@ -335,8 +325,7 @@ func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error)
 	}
 
 	var records []*MigrationRecord
-	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", tableName)
-	_, err = dbMap.Select(&records, query)
+	_, err = dbMap.Select(&records, "SELECT * FROM gorp_migrations ORDER BY id ASC")
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +340,7 @@ func getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
 	}
 
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
-	dbMap.AddTableWithName(MigrationRecord{}, tableName).SetKeys(false, "Id")
+	dbMap.AddTableWithName(MigrationRecord{}, "gorp_migrations").SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 	return dbMap, nil
 }
