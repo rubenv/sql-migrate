@@ -336,8 +336,13 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 // Filter a slice of migrations into ones that should be applied.
 func ToApply(migrations []*Migration, current string, direction MigrationDirection) []*Migration {
 	var index = -1
-	for index < len(migrations)-1 && migrations[index+1].Id <= current {
-		index++
+	if current != "" {
+		for index < len(migrations)-1 {
+			index++
+			if migrations[index].Id == current {
+				break
+			}
+		}
 	}
 
 	if direction == Up {

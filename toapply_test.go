@@ -1,6 +1,9 @@
 package migrate
 
-import . "gopkg.in/check.v1"
+import (
+	"sort"
+	. "gopkg.in/check.v1"
+)
 
 var toapplyMigrations = []*Migration{
 	&Migration{Id: "abc", Up: nil, Down: nil},
@@ -72,4 +75,27 @@ func (s *ToApplyMigrateSuite) TestDownAll(c *C) {
 	c.Assert(toApply[0], Equals, toapplyMigrations[2])
 	c.Assert(toApply[1], Equals, toapplyMigrations[1])
 	c.Assert(toApply[2], Equals, toapplyMigrations[0])
+}
+
+func (s *ToApplyMigrateSuite) TestAlphaNumericMigrations(c *C) {
+	var migrations = byId([]*Migration{
+		&Migration{Id: "10_abc", Up: nil, Down: nil},
+		&Migration{Id: "1_abc", Up: nil, Down: nil},
+		&Migration{Id: "efg", Up: nil, Down: nil},
+		&Migration{Id: "2_cde", Up: nil, Down: nil},
+		&Migration{Id: "35_cde", Up: nil, Down: nil},
+	})
+
+	sort.Sort(migrations)
+
+	toApplyUp := ToApply(migrations, "2_cde", Up)
+	c.Assert(toApplyUp, HasLen, 3)
+	c.Assert(toApplyUp[0].Id, Equals, "10_abc")
+	c.Assert(toApplyUp[1].Id, Equals, "35_cde")
+	c.Assert(toApplyUp[2].Id, Equals, "efg")
+
+	toApplyDown := ToApply(migrations, "2_cde", Down)
+	c.Assert(toApplyDown, HasLen, 2)
+	c.Assert(toApplyDown[0].Id, Equals, "2_cde")
+	c.Assert(toApplyDown[1].Id, Equals, "1_abc")
 }
