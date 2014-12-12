@@ -8,7 +8,9 @@ import (
 	"io"
 	"os"
 	"path"
+	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -40,6 +42,37 @@ type Migration struct {
 	Down []string
 }
 
+func (m Migration) Less(other *Migration) bool {
+	switch {
+	case m.isNumeric() && other.isNumeric():
+		return m.VersionInt() < other.VersionInt()
+	case m.isNumeric() && !other.isNumeric():
+		return true
+	case !m.isNumeric() && other.isNumeric():
+		return false
+	default:
+		return m.Id < other.Id
+	}
+}
+
+func (m Migration) isNumeric() bool {
+	return len(m.NumberPrefixMatches()) > 0
+}
+
+func (m Migration) NumberPrefixMatches() []string {
+	r := regexp.MustCompile(`^(\d+).*$`)
+	return r.FindStringSubmatch(m.Id)
+}
+
+func (m Migration) VersionInt() int64 {
+	v := m.NumberPrefixMatches()[1]
+	value, err := strconv.ParseInt(v, 10, 64)
+	if err != nil {
+		panic(fmt.Sprintf("Could not parse %q into int64: %s", v, err))
+	}
+	return value
+}
+
 type PlannedMigration struct {
 	*Migration
 	Queries []string
@@ -49,7 +82,7 @@ type byId []*Migration
 
 func (b byId) Len() int           { return len(b) }
 func (b byId) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
-func (b byId) Less(i, j int) bool { return b[i].Id < b[j].Id }
+func (b byId) Less(i, j int) bool { return b[i].Less(b[j]) }
 
 type MigrationRecord struct {
 	Id        string    `db:"id"`
