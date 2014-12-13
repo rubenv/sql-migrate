@@ -302,12 +302,25 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 		return nil, nil, err
 	}
 
-	// Find the newest applied migration
-	var record MigrationRecord
-	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id DESC LIMIT 1", tableName)
-	err = dbMap.SelectOne(&record, query)
-	if err != nil && err != sql.ErrNoRows {
+	var migrationRecords []MigrationRecord
+	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", tableName))
+	if err != nil {
 		return nil, nil, err
+	}
+
+	// Sort migrations that have been run by Id.
+	var existingMigrations []*Migration
+	for _, migrationRecord := range migrationRecords {
+		existingMigrations = append(existingMigrations, &Migration{
+			Id: migrationRecord.Id,
+		})
+	}
+	sort.Sort(byId(existingMigrations))
+
+	// Get last migration that was run
+	record := &Migration{}
+	if len(existingMigrations) > 0 {
+		record = existingMigrations[len(existingMigrations)-1]
 	}
 
 	// Figure out which of the supplied migrations has been applied.
