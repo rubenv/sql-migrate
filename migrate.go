@@ -26,6 +26,7 @@ const (
 )
 
 var tableName = "gorp_migrations"
+var numberPrefixRegex = regexp.MustCompile(`^(\d+).*$`)
 
 // Set the name of the table used to store migration info.
 //
@@ -60,8 +61,7 @@ func (m Migration) isNumeric() bool {
 }
 
 func (m Migration) NumberPrefixMatches() []string {
-	r := regexp.MustCompile(`^(\d+).*$`)
-	return r.FindStringSubmatch(m.Id)
+	return numberPrefixRegex.FindStringSubmatch(m.Id)
 }
 
 func (m Migration) VersionInt() int64 {
