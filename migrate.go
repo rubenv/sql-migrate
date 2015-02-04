@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/coopernurse/gorp"
+	"github.com/go-gorp/gorp"
 	"github.com/rubenv/sql-migrate/sqlparse"
 )
 
