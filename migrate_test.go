@@ -267,9 +267,14 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	c.Assert(n, Equals, 3)
 
 	migrations.Migrations = append(migrations.Migrations, &Migration{
-		Id:   "11_add_middle_name.sql",
-		Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
-		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
+		Id: "11_add_middle_name.sql",
+		Up: []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+		Down: []string{
+			"CREATE TEMPORARY TABLE people_backup(id int, first_name text, last_name text);",
+			"INSERT INTO people_backup SELECT id, first_name, last_name  FROM people;",
+			"DROP TABLE people;",
+			"ALTER TABLE people_backup RENAME TO people;",
+		},
 	})
 
 	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
@@ -277,10 +282,22 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	c.Assert(plannedMigrations, HasLen, 1)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[3])
 
+	_, err = Exec(s.Db, "sqlite3", migrations, Up)
+
+	migrations.Migrations = migrations.Migrations[0:3] //simulate redployig app without last sql file
+
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	c.Assert(plannedMigrations, HasLen, 1)
+	n, err = Exec(s.Db, "sqlite3", migrations, Up)
+
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	c.Assert(plannedMigrations, HasLen, 0)
+
 	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[2])
 	c.Assert(plannedMigrations[1].Migration, Equals, migrations.Migrations[1])
 	c.Assert(plannedMigrations[2].Migration, Equals, migrations.Migrations[0])
+
 }
