@@ -87,6 +87,7 @@ func (b byId) Less(i, j int) bool { return b[i].Less(b[j]) }
 type MigrationRecord struct {
 	Id        string    `db:"id"`
 	AppliedAt time.Time `db:"applied_at"`
+	DownSql   string    `db:"down_sql"`
 }
 
 var MigrationDialects = map[string]gorp.Dialect{
@@ -261,10 +262,19 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 		}
 
 		if dir == Up {
-			err = trans.Insert(&MigrationRecord{
-				Id:        migration.Id,
-				AppliedAt: time.Now(),
-			})
+			if len(migration.Migration.Up) != 0 {
+				//this is a real up - insert the record
+				err = trans.Insert(&MigrationRecord{
+					Id:        migration.Id,
+					AppliedAt: time.Now(),
+					DownSql:   strings.Join(migration.Down, "\n"),
+				})
+			} else {
+				//no up query means this is supposed ot prune thi smigration from db
+				_, err = trans.Delete(&MigrationRecord{
+					Id: migration.Id,
+				})
+			}
 			if err != nil {
 				return applied, err
 			}
@@ -343,6 +353,18 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 		}
 	}
 
+	// if we are downgrading our main app, apply the downs of the
+	// new migrations that have been run. We know a migration is no
+	// longer relevant if the file that it ran from no longer exists
+	migrationsToRemove := ToRemove(migrations, migrationRecords)
+	for _, v := range migrationsToRemove {
+		result = append(result, &PlannedMigration{
+			Migration: v,
+			Queries:   v.Down,
+		})
+
+	}
+
 	return result, dbMap, nil
 }
 
@@ -372,6 +394,41 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 		}
 		return toApply
 	}
+
+	panic("Not possible")
+}
+
+// Filter a slice of migrations into ones that should be removed.
+// A migrations should be removed if the .sql file no longer exists or
+// the  MigrationSource no longer has the migration but it still exists in the DB.
+// This can happen if an older version of the Application is deployed in a rollback scenario
+func ToRemove(migrations []*Migration, migrationRecords []MigrationRecord) []*Migration {
+	missingMigrations := make([]*Migration, 0)
+
+	for _, mr := range migrationRecords {
+		var migrationExists = false
+		for _, m := range migrations {
+			if m.Id == mr.Id {
+				migrationExists = true
+				break
+			}
+		}
+		//fmt.Println(mr, ": ", migrationExists)
+		if !migrationExists {
+			var m Migration
+			m.Id = mr.Id
+			m.Down = strings.Split(mr.DownSql, "\n")
+			missingMigrations = append(missingMigrations, &m)
+		}
+	}
+
+	// Add in reverse order
+	index := len(missingMigrations) - 1
+	toRemove := make([]*Migration, index+1)
+	for i := 0; i <= index; i++ {
+		toRemove[index-i] = missingMigrations[i]
+	}
+	return toRemove
 
 	panic("Not possible")
 }
