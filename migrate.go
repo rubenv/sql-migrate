@@ -395,10 +395,8 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 				break
 			}
 		}
-		if !found {
-			if migration.Less(lastRun) {
-				missing = append(missing, &PlannedMigration{Migration: migration, Queries: migration.Up})
-			}
+		if !found && migration.Less(lastRun) {
+			missing = append(missing, &PlannedMigration{Migration: migration, Queries: migration.Up})
 		}
 	}
 	return missing
