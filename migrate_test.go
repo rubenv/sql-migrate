@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"os"
 
+	"github.com/go-gorp/gorp"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rubenv/gorp"
 	. "gopkg.in/check.v1"
 )
 
