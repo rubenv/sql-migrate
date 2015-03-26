@@ -323,23 +323,32 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 		record = existingMigrations[len(existingMigrations)-1]
 	}
 
-	// Figure out which of the supplied migrations has been applied.
+	result := make([]*PlannedMigration, 0)
+
+	// Add missing migrations up to the last run migration.
+	// This can happen for example when merges happened.
+	if len(existingMigrations) > 0 {
+		result = append(result, ToCatchup(migrations, existingMigrations, record)...)
+	}
+
+	// Figure out which migrations to apply
 	toApply := ToApply(migrations, record.Id, dir)
 	toApplyCount := len(toApply)
 	if max > 0 && max < toApplyCount {
 		toApplyCount = max
 	}
-
-	result := make([]*PlannedMigration, toApplyCount)
-	for k, v := range toApply[0:toApplyCount] {
-		result[k] = &PlannedMigration{
-			Migration: v,
-		}
+	for _, v := range toApply[0:toApplyCount] {
 
 		if dir == Up {
-			result[k].Queries = v.Up
+			result = append(result, &PlannedMigration{
+				Migration: v,
+				Queries:   v.Up,
+			})
 		} else if dir == Down {
-			result[k].Queries = v.Down
+			result = append(result, &PlannedMigration{
+				Migration: v,
+				Queries:   v.Down,
+			})
 		}
 	}
 
@@ -374,6 +383,25 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	}
 
 	panic("Not possible")
+}
+
+func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) []*PlannedMigration {
+	missing := make([]*PlannedMigration, 0)
+	for _, migration := range migrations {
+		found := false
+		for _, existing := range existingMigrations {
+			if existing.Id == migration.Id {
+				found = true
+				break
+			}
+		}
+		if !found {
+			if migration.Less(lastRun) {
+				missing = append(missing, &PlannedMigration{Migration: migration, Queries: migration.Up})
+			}
+		}
+	}
+	return missing
 }
 
 func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error) {
