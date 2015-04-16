@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"os"
 
+	"github.com/go-gorp/gorp"
 	_ "github.com/mattn/go-sqlite3"
-	"github.com/rubenv/gorp"
 	. "gopkg.in/check.v1"
 )
 
@@ -283,4 +283,75 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[2])
 	c.Assert(plannedMigrations[1].Migration, Equals, migrations.Migrations[1])
 	c.Assert(plannedMigrations[2].Migration, Equals, migrations.Migrations[0])
+}
+
+func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
+	up := "SELECT 0"
+	down := "SELECT 1"
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			&Migration{
+				Id:   "1",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+			&Migration{
+				Id:   "3",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+		},
+	}
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	migrations.Migrations = append(migrations.Migrations, &Migration{
+		Id:   "2",
+		Up:   []string{up},
+		Down: []string{down},
+	})
+
+	migrations.Migrations = append(migrations.Migrations, &Migration{
+		Id:   "4",
+		Up:   []string{up},
+		Down: []string{down},
+	})
+
+	migrations.Migrations = append(migrations.Migrations, &Migration{
+		Id:   "5",
+		Up:   []string{up},
+		Down: []string{down},
+	})
+
+	// apply all the missing migrations
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 3)
+	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
+	c.Assert(plannedMigrations[0].Queries[0], Equals, up)
+	c.Assert(plannedMigrations[1].Migration.Id, Equals, "4")
+	c.Assert(plannedMigrations[1].Queries[0], Equals, up)
+	c.Assert(plannedMigrations[2].Migration.Id, Equals, "5")
+	c.Assert(plannedMigrations[2].Queries[0], Equals, up)
+
+	// first catch up to current target state 123, then migrate down 1 step to 12
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 1)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 2)
+	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
+	c.Assert(plannedMigrations[0].Queries[0], Equals, up)
+	c.Assert(plannedMigrations[1].Migration.Id, Equals, "3")
+	c.Assert(plannedMigrations[1].Queries[0], Equals, down)
+
+	// first catch up to current target state 123, then migrate down 2 steps to 1
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 2)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 3)
+	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
+	c.Assert(plannedMigrations[0].Queries[0], Equals, up)
+	c.Assert(plannedMigrations[1].Migration.Id, Equals, "3")
+	c.Assert(plannedMigrations[1].Queries[0], Equals, down)
+	c.Assert(plannedMigrations[2].Migration.Id, Equals, "2")
+	c.Assert(plannedMigrations[2].Queries[0], Equals, down)
 }
