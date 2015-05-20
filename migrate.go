@@ -26,6 +26,7 @@ const (
 )
 
 var tableName = "gorp_migrations"
+var schemaName = ""
 var numberPrefixRegex = regexp.MustCompile(`^(\d+).*$`)
 
 // Set the name of the table used to store migration info.
@@ -35,6 +36,22 @@ func SetTable(name string) {
 	if name != "" {
 		tableName = name
 	}
+}
+
+// SetSchema sets the name of a schema that the migration table be referenced.
+func SetSchema(name string) {
+	if name != "" {
+		schemaName = name
+	}
+}
+
+func getTableName() string {
+	t := tableName
+	if schemaName != "" {
+		t = fmt.Sprintf("%s.%s", schemaName, t)
+	}
+
+	return t
 }
 
 type Migration struct {
@@ -303,7 +320,7 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	}
 
 	var migrationRecords []MigrationRecord
-	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", tableName))
+	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", getTableName()))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -409,7 +426,7 @@ func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error)
 	}
 
 	var records []*MigrationRecord
-	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", tableName)
+	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", getTableName())
 	_, err = dbMap.Select(&records, query)
 	if err != nil {
 		return nil, err
@@ -444,7 +461,7 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 
 	// Create migration database map
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
-	dbMap.AddTableWithName(MigrationRecord{}, tableName).SetKeys(false, "Id")
+	dbMap.AddTableWithNameAndSchema(MigrationRecord{}, schemaName, tableName).SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 
 	err := dbMap.CreateTablesIfNotExists()
