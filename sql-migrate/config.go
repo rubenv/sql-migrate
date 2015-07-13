@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"io/ioutil"
 
-	"github.com/go-gorp/gorp"
 	"github.com/rubenv/sql-migrate"
+	"gopkg.in/gorp.v1"
 	"gopkg.in/yaml.v1"
 
 	_ "github.com/go-sql-driver/mysql"

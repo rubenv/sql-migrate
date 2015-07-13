@@ -4,9 +4,9 @@ import (
 	"database/sql"
 	"os"
 
-	"github.com/go-gorp/gorp"
 	_ "github.com/mattn/go-sqlite3"
 	. "gopkg.in/check.v1"
+	"gopkg.in/gorp.v1"
 )
 
 var filename = "/tmp/sql-migrate-sqlite.db"

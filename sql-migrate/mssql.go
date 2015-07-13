@@ -4,7 +4,7 @@ package main
 
 import (
 	_ "github.com/denisenkom/go-mssqldb"
-	"github.com/go-gorp/gorp"
+	"gopkg.in/gorp.v1"
 )
 
 func init() {
