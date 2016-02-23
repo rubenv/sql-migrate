@@ -29,6 +29,18 @@ var tableName = "gorp_migrations"
 var schemaName = ""
 var numberPrefixRegex = regexp.MustCompile(`^(\d+).*$`)
 
+// TxError is returned when any error is encountered during a database
+// transaction. It contains the relevant *Migration and notes it's Id in the
+// Error function output.
+type TxError struct {
+	Migration *Migration
+	Err       error
+}
+
+func (e *TxError) Error() string {
+	return e.Err.Error() + " handling " + e.Migration.Id
+}
+
 // Set the name of the table used to store migration info.
 //
 // Should be called before any other call such as (Exec, ExecMax, ...).
@@ -266,13 +278,23 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	for _, migration := range migrations {
 		trans, err := dbMap.Begin()
 		if err != nil {
+			err := &TxError{
+				Migration: migration.Migration,
+				Err:       err,
+			}
+
 			return applied, err
 		}
 
 		for _, stmt := range migration.Queries {
-			_, err := trans.Exec(stmt)
-			if err != nil {
+			if _, err := trans.Exec(stmt); err != nil {
 				trans.Rollback()
+
+				err := &TxError{
+					Migration: migration.Migration,
+					Err:       err,
+				}
+
 				return applied, err
 			}
 		}
@@ -283,6 +305,11 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 				AppliedAt: time.Now(),
 			})
 			if err != nil {
+				err := &TxError{
+					Migration: migration.Migration,
+					Err:       err,
+				}
+
 				return applied, err
 			}
 		} else if dir == Down {
@@ -290,14 +317,23 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 				Id: migration.Id,
 			})
 			if err != nil {
+				err := &TxError{
+					Migration: migration.Migration,
+					Err:       err,
+				}
+
 				return applied, err
 			}
 		} else {
 			panic("Not possible")
 		}
 
-		err = trans.Commit()
-		if err != nil {
+		if err := trans.Commit(); err != nil {
+			err := &TxError{
+				Migration: migration.Migration,
+				Err:       err,
+			}
+
 			return applied, err
 		}
 
