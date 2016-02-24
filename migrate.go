@@ -37,6 +37,13 @@ type TxError struct {
 	Err       error
 }
 
+func newTxError(migration *PlannedMigration, err error) error {
+	return &TxError{
+		Migration: migration.Migration,
+		Err:       err,
+	}
+}
+
 func (e *TxError) Error() string {
 	return e.Err.Error() + " handling " + e.Migration.Id
 }
@@ -278,24 +285,13 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	for _, migration := range migrations {
 		trans, err := dbMap.Begin()
 		if err != nil {
-			err := &TxError{
-				Migration: migration.Migration,
-				Err:       err,
-			}
-
-			return applied, err
+			return applied, newTxError(migration, err)
 		}
 
 		for _, stmt := range migration.Queries {
 			if _, err := trans.Exec(stmt); err != nil {
 				trans.Rollback()
-
-				err := &TxError{
-					Migration: migration.Migration,
-					Err:       err,
-				}
-
-				return applied, err
+				return applied, newTxError(migration, err)
 			}
 		}
 
@@ -305,36 +301,21 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 				AppliedAt: time.Now(),
 			})
 			if err != nil {
-				err := &TxError{
-					Migration: migration.Migration,
-					Err:       err,
-				}
-
-				return applied, err
+				return applied, newTxError(migration, err)
 			}
 		} else if dir == Down {
 			_, err := trans.Delete(&MigrationRecord{
 				Id: migration.Id,
 			})
 			if err != nil {
-				err := &TxError{
-					Migration: migration.Migration,
-					Err:       err,
-				}
-
-				return applied, err
+				return applied, newTxError(migration, err)
 			}
 		} else {
 			panic("Not possible")
 		}
 
 		if err := trans.Commit(); err != nil {
-			err := &TxError{
-				Migration: migration.Migration,
-				Err:       err,
-			}
-
-			return applied, err
+			return applied, newTxError(migration, err)
 		}
 
 		applied++
