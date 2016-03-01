@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"database/sql"
+	"io/ioutil"
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -9,7 +10,7 @@ import (
 	"gopkg.in/gorp.v1"
 )
 
-var filename = "/tmp/sql-migrate-sqlite.db"
+var testDatabaseFile *os.File
 var sqliteMigrations = []*Migration{
 	&Migration{
 		Id:   "123",
@@ -31,7 +32,10 @@ type SqliteMigrateSuite struct {
 var _ = Suite(&SqliteMigrateSuite{})
 
 func (s *SqliteMigrateSuite) SetUpTest(c *C) {
-	db, err := sql.Open("sqlite3", filename)
+	var err error
+	testDatabaseFile, err = ioutil.TempFile("", "sql-migrate-sqlite")
+	c.Assert(err, IsNil)
+	db, err := sql.Open("sqlite3", testDatabaseFile.Name())
 	c.Assert(err, IsNil)
 
 	s.Db = db
@@ -39,7 +43,7 @@ func (s *SqliteMigrateSuite) SetUpTest(c *C) {
 }
 
 func (s *SqliteMigrateSuite) TearDownTest(c *C) {
-	err := os.Remove(filename)
+	err := os.Remove(testDatabaseFile.Name())
 	c.Assert(err, IsNil)
 }
 
