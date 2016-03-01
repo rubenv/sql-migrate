@@ -360,14 +360,18 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, down)
 }
 
-func (s *SqliteMigrateSuite) TestLessTwoNumeric(c *C) {
-	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "2"}), Equals, true)      // 1 less than 2
-	c.Assert((Migration{Id: "2"}).Less(&Migration{Id: "1"}), Equals, false)     // 2 not less than 1
-	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "a"}), Equals, true)      // 1 less than a
-	c.Assert((Migration{Id: "a"}).Less(&Migration{Id: "1"}), Equals, false)     // a not less than 1
-	c.Assert((Migration{Id: "a"}).Less(&Migration{Id: "a"}), Equals, false)     // a not less than a
-	c.Assert((Migration{Id: "1-a"}).Less(&Migration{Id: "1-b"}), Equals, true)  // 1-a less than 1-b
-	c.Assert((Migration{Id: "1-b"}).Less(&Migration{Id: "1-a"}), Equals, false) // 1-b not less than 1-a
+func (s *SqliteMigrateSuite) TestLess(c *C) {
+	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "2"}), Equals, true)           // 1 less than 2
+	c.Assert((Migration{Id: "2"}).Less(&Migration{Id: "1"}), Equals, false)          // 2 not less than 1
+	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "a"}), Equals, true)           // 1 less than a
+	c.Assert((Migration{Id: "a"}).Less(&Migration{Id: "1"}), Equals, false)          // a not less than 1
+	c.Assert((Migration{Id: "a"}).Less(&Migration{Id: "a"}), Equals, false)          // a not less than a
+	c.Assert((Migration{Id: "1-a"}).Less(&Migration{Id: "1-b"}), Equals, true)       // 1-a less than 1-b
+	c.Assert((Migration{Id: "1-b"}).Less(&Migration{Id: "1-a"}), Equals, false)      // 1-b not less than 1-a
+	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "10"}), Equals, true)          // 1 less than 10
+	c.Assert((Migration{Id: "10"}).Less(&Migration{Id: "1"}), Equals, false)         // 10 not less than 1
+	c.Assert((Migration{Id: "1_foo"}).Less(&Migration{Id: "10_bar"}), Equals, true)  // 1_foo not less than 1
+	c.Assert((Migration{Id: "10_bar"}).Less(&Migration{Id: "1_foo"}), Equals, false) // 10 not less than 1
 	// 20160126_1100 less than 20160126_1200
 	c.Assert((Migration{Id: "20160126_1100"}).
 		Less(&Migration{Id: "20160126_1200"}), Equals, true)
