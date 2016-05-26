@@ -128,7 +128,7 @@ type MigrationRecord struct {
 var MigrationDialects = map[string]gorp.Dialect{
 	"sqlite3":  gorp.SqliteDialect{},
 	"postgres": gorp.PostgresDialect{},
-	"mysql":    gorp.MySQLDialect{"InnoDB", "UTF8"},
+	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
 	"mssql":    gorp.SqlServerDialect{},
 	"oci8":     gorp.OracleDialect{},
 }

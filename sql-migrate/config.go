@@ -19,7 +19,7 @@ import (
 var dialects = map[string]gorp.Dialect{
 	"sqlite3":  gorp.SqliteDialect{},
 	"postgres": gorp.PostgresDialect{},
-	"mysql":    gorp.MySQLDialect{"InnoDB", "UTF8"},
+	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
 }
 
 var ConfigFile string
