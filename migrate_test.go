@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"database/sql"
+	"io/ioutil"
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -9,7 +10,7 @@ import (
 	"gopkg.in/gorp.v1"
 )
 
-var filename = "/tmp/sql-migrate-sqlite.db"
+var testDatabaseFile *os.File
 var sqliteMigrations = []*Migration{
 	&Migration{
 		Id:   "123",
@@ -31,7 +32,10 @@ type SqliteMigrateSuite struct {
 var _ = Suite(&SqliteMigrateSuite{})
 
 func (s *SqliteMigrateSuite) SetUpTest(c *C) {
-	db, err := sql.Open("sqlite3", filename)
+	var err error
+	testDatabaseFile, err = ioutil.TempFile("", "sql-migrate-sqlite")
+	c.Assert(err, IsNil)
+	db, err := sql.Open("sqlite3", testDatabaseFile.Name())
 	c.Assert(err, IsNil)
 
 	s.Db = db
@@ -39,7 +43,7 @@ func (s *SqliteMigrateSuite) SetUpTest(c *C) {
 }
 
 func (s *SqliteMigrateSuite) TearDownTest(c *C) {
-	err := os.Remove(filename)
+	err := os.Remove(testDatabaseFile.Name())
 	c.Assert(err, IsNil)
 }
 
@@ -354,4 +358,25 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[1].Queries[0], Equals, down)
 	c.Assert(plannedMigrations[2].Migration.Id, Equals, "2")
 	c.Assert(plannedMigrations[2].Queries[0], Equals, down)
+}
+
+func (s *SqliteMigrateSuite) TestLess(c *C) {
+	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "2"}), Equals, true)           // 1 less than 2
+	c.Assert((Migration{Id: "2"}).Less(&Migration{Id: "1"}), Equals, false)          // 2 not less than 1
+	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "a"}), Equals, true)           // 1 less than a
+	c.Assert((Migration{Id: "a"}).Less(&Migration{Id: "1"}), Equals, false)          // a not less than 1
+	c.Assert((Migration{Id: "a"}).Less(&Migration{Id: "a"}), Equals, false)          // a not less than a
+	c.Assert((Migration{Id: "1-a"}).Less(&Migration{Id: "1-b"}), Equals, true)       // 1-a less than 1-b
+	c.Assert((Migration{Id: "1-b"}).Less(&Migration{Id: "1-a"}), Equals, false)      // 1-b not less than 1-a
+	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "10"}), Equals, true)          // 1 less than 10
+	c.Assert((Migration{Id: "10"}).Less(&Migration{Id: "1"}), Equals, false)         // 10 not less than 1
+	c.Assert((Migration{Id: "1_foo"}).Less(&Migration{Id: "10_bar"}), Equals, true)  // 1_foo not less than 1
+	c.Assert((Migration{Id: "10_bar"}).Less(&Migration{Id: "1_foo"}), Equals, false) // 10 not less than 1
+	// 20160126_1100 less than 20160126_1200
+	c.Assert((Migration{Id: "20160126_1100"}).
+		Less(&Migration{Id: "20160126_1200"}), Equals, true)
+	// 20160126_1200 not less than 20160126_1100
+	c.Assert((Migration{Id: "20160126_1200"}).
+		Less(&Migration{Id: "20160126_1100"}), Equals, false)
+
 }

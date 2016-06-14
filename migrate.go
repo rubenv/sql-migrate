@@ -81,7 +81,7 @@ type Migration struct {
 
 func (m Migration) Less(other *Migration) bool {
 	switch {
-	case m.isNumeric() && other.isNumeric():
+	case m.isNumeric() && other.isNumeric() && m.VersionInt() != other.VersionInt():
 		return m.VersionInt() < other.VersionInt()
 	case m.isNumeric() && !other.isNumeric():
 		return true
