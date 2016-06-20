@@ -6,6 +6,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"os"
 
 	"github.com/rubenv/sql-migrate"
 	"gopkg.in/gorp.v1"
@@ -71,6 +72,7 @@ func GetEnvironment() (*Environment, error) {
 	if env.DataSource == "" {
 		return nil, errors.New("No data source specified")
 	}
+	env.DataSource = os.ExpandEnv(env.DataSource)
 
 	if env.Dir == "" {
 		env.Dir = "migrations"

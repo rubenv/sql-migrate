@@ -13,6 +13,11 @@ mysql_noflag:
     datasource: root@/test
     dir: test-migrations
 
+mysql_env:
+    dialect: mysql
+    datasource: ${MYSQL_USER}@/$DATABASE?parseTime=true
+    dir: test-migrations
+
 sqlite:
     dialect: sqlite3
     datasource: test.db
