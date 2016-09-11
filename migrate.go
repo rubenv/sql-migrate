@@ -77,6 +77,9 @@ type Migration struct {
 	Id   string
 	Up   []string
 	Down []string
+
+	DisableTransactionUp   bool
+	DisableTransactionDown bool
 }
 
 func (m Migration) Less(other *Migration) bool {
@@ -111,7 +114,9 @@ func (m Migration) VersionInt() int64 {
 
 type PlannedMigration struct {
 	*Migration
-	Queries []string
+
+	DisableTransaction bool
+	Queries            []string
 }
 
 type byId []*Migration
@@ -254,8 +259,16 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 	m.Up = parsed.UpStatements
 	m.Down = parsed.DownStatements
 
+	m.DisableTransactionUp = parsed.DisableTransactionUp
+	m.DisableTransactionDown = parsed.DisableTransactionDown
 
 	return m, nil
+}
+
+type SqlExecutor interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Insert(list ...interface{}) error
+	Delete(list ...interface{}) (int64, error)
 }
 
 // Execute a set of migrations
@@ -279,20 +292,29 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	// Apply migrations
 	applied := 0
 	for _, migration := range migrations {
-		trans, err := dbMap.Begin()
-		if err != nil {
-			return applied, newTxError(migration, err)
+		var executor SqlExecutor
+
+		if migration.DisableTransaction {
+			executor = dbMap
+		} else {
+			executor, err = dbMap.Begin()
+			if err != nil {
+				return applied, newTxError(migration, err)
+			}
 		}
 
 		for _, stmt := range migration.Queries {
-			if _, err := trans.Exec(stmt); err != nil {
-				trans.Rollback()
+			if _, err := executor.Exec(stmt); err != nil {
+				if trans, ok := executor.(*gorp.Transaction); ok {
+					trans.Commit()
+				}
+
 				return applied, newTxError(migration, err)
 			}
 		}
 
 		if dir == Up {
-			err = trans.Insert(&MigrationRecord{
+			err = executor.Insert(&MigrationRecord{
 				Id:        migration.Id,
 				AppliedAt: time.Now(),
 			})
@@ -300,7 +322,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 				return applied, newTxError(migration, err)
 			}
 		} else if dir == Down {
-			_, err := trans.Delete(&MigrationRecord{
+			_, err := executor.Delete(&MigrationRecord{
 				Id: migration.Id,
 			})
 			if err != nil {
@@ -310,8 +332,10 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 			panic("Not possible")
 		}
 
-		if err := trans.Commit(); err != nil {
-			return applied, newTxError(migration, err)
+		if trans, ok := executor.(*gorp.Transaction); ok {
+			if err := trans.Commit(); err != nil {
+				return applied, newTxError(migration, err)
+			}
 		}
 
 		applied++
@@ -371,13 +395,15 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 
 		if dir == Up {
 			result = append(result, &PlannedMigration{
-				Migration: v,
-				Queries:   v.Up,
+				Migration:          v,
+				Queries:            v.Up,
+				DisableTransaction: v.DisableTransactionUp,
 			})
 		} else if dir == Down {
 			result = append(result, &PlannedMigration{
-				Migration: v,
-				Queries:   v.Down,
+				Migration:          v,
+				Queries:            v.Down,
+				DisableTransaction: v.DisableTransactionDown,
 			})
 		}
 	}
@@ -426,7 +452,11 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 			}
 		}
 		if !found && migration.Less(lastRun) {
-			missing = append(missing, &PlannedMigration{Migration: migration, Queries: migration.Up})
+			missing = append(missing, &PlannedMigration{
+				Migration:          migration,
+				Queries:            migration.Up,
+				DisableTransaction: migration.DisableTransactionUp,
+			})
 		}
 	}
 	return missing
