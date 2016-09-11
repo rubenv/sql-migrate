@@ -10,12 +10,16 @@ import (
 )
 
 const (
-	sqlCmdPrefix = "-- +migrate "
+	sqlCmdPrefix        = "-- +migrate "
+	optionNoTransaction = "notransaction"
 )
 
 type ParsedMigration struct {
 	UpStatements   []string
 	DownStatements []string
+
+	DisableTransactionUp   bool
+	DisableTransactionDown bool
 }
 
 // Checks the line to see if the line has a statement-ending semicolon
@@ -116,10 +120,16 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 			switch cmd.Command {
 			case "Up":
 				currentDirection = directionUp
+				if cmd.HasOption(optionNoTransaction) {
+					p.DisableTransactionUp = true
+				}
 				break
 
 			case "Down":
 				currentDirection = directionDown
+				if cmd.HasOption(optionNoTransaction) {
+					p.DisableTransactionDown = true
+				}
 				break
 
 			case "StatementBegin":
