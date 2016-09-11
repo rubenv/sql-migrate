@@ -246,18 +246,14 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 		Id: id,
 	}
 
-	up, err := sqlparse.SplitSQLStatements(r, true)
+	parsed, err := sqlparse.ParseMigration(r)
 	if err != nil {
 		return nil, err
 	}
 
-	down, err := sqlparse.SplitSQLStatements(r, false)
-	if err != nil {
-		return nil, err
-	}
+	m.Up = parsed.UpStatements
+	m.Down = parsed.DownStatements
 
-	m.Up = up
-	m.Down = down
 
 	return m, nil
 }
