@@ -306,7 +306,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 		for _, stmt := range migration.Queries {
 			if _, err := executor.Exec(stmt); err != nil {
 				if trans, ok := executor.(*gorp.Transaction); ok {
-					trans.Commit()
+					trans.Rollback()
 				}
 
 				return applied, newTxError(migration, err)
