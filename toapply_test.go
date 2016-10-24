@@ -17,7 +17,7 @@ type ToApplyMigrateSuite struct {
 var _ = Suite(&ToApplyMigrateSuite{})
 
 func (s *ToApplyMigrateSuite) TestGetAll(c *C) {
-	toApply := ToApply(toapplyMigrations, "", Up)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations[0:0], Up)
 	c.Assert(toApply, HasLen, 3)
 	c.Assert(toApply[0], Equals, toapplyMigrations[0])
 	c.Assert(toApply[1], Equals, toapplyMigrations[1])
@@ -25,52 +25,43 @@ func (s *ToApplyMigrateSuite) TestGetAll(c *C) {
 }
 
 func (s *ToApplyMigrateSuite) TestGetAbc(c *C) {
-	toApply := ToApply(toapplyMigrations, "abc", Up)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations[0:1], Up)
 	c.Assert(toApply, HasLen, 2)
 	c.Assert(toApply[0], Equals, toapplyMigrations[1])
 	c.Assert(toApply[1], Equals, toapplyMigrations[2])
 }
 
 func (s *ToApplyMigrateSuite) TestGetCde(c *C) {
-	toApply := ToApply(toapplyMigrations, "cde", Up)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations[0:2], Up)
 	c.Assert(toApply, HasLen, 1)
 	c.Assert(toApply[0], Equals, toapplyMigrations[2])
 }
 
 func (s *ToApplyMigrateSuite) TestGetDone(c *C) {
-	toApply := ToApply(toapplyMigrations, "efg", Up)
-	c.Assert(toApply, HasLen, 0)
-
-	toApply = ToApply(toapplyMigrations, "zzz", Up)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations[0:3], Up)
 	c.Assert(toApply, HasLen, 0)
 }
 
 func (s *ToApplyMigrateSuite) TestDownDone(c *C) {
-	toApply := ToApply(toapplyMigrations, "", Down)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations[0:0], Down)
 	c.Assert(toApply, HasLen, 0)
 }
 
 func (s *ToApplyMigrateSuite) TestDownCde(c *C) {
-	toApply := ToApply(toapplyMigrations, "cde", Down)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations[0:2], Down)
 	c.Assert(toApply, HasLen, 2)
 	c.Assert(toApply[0], Equals, toapplyMigrations[1])
 	c.Assert(toApply[1], Equals, toapplyMigrations[0])
 }
 
 func (s *ToApplyMigrateSuite) TestDownAbc(c *C) {
-	toApply := ToApply(toapplyMigrations, "abc", Down)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations[0:1], Down)
 	c.Assert(toApply, HasLen, 1)
 	c.Assert(toApply[0], Equals, toapplyMigrations[0])
 }
 
 func (s *ToApplyMigrateSuite) TestDownAll(c *C) {
-	toApply := ToApply(toapplyMigrations, "efg", Down)
-	c.Assert(toApply, HasLen, 3)
-	c.Assert(toApply[0], Equals, toapplyMigrations[2])
-	c.Assert(toApply[1], Equals, toapplyMigrations[1])
-	c.Assert(toApply[2], Equals, toapplyMigrations[0])
-
-	toApply = ToApply(toapplyMigrations, "zzz", Down)
+	toApply := ToApply(toapplyMigrations, toapplyMigrations, Down)
 	c.Assert(toApply, HasLen, 3)
 	c.Assert(toApply[0], Equals, toapplyMigrations[2])
 	c.Assert(toApply[1], Equals, toapplyMigrations[1])
@@ -88,13 +79,13 @@ func (s *ToApplyMigrateSuite) TestAlphaNumericMigrations(c *C) {
 
 	sort.Sort(migrations)
 
-	toApplyUp := ToApply(migrations, "2_cde", Up)
+	toApplyUp := ToApply(migrations, migrations[0:2], Up)
 	c.Assert(toApplyUp, HasLen, 3)
 	c.Assert(toApplyUp[0].Id, Equals, "10_abc")
 	c.Assert(toApplyUp[1].Id, Equals, "35_cde")
 	c.Assert(toApplyUp[2].Id, Equals, "efg")
 
-	toApplyDown := ToApply(migrations, "2_cde", Down)
+	toApplyDown := ToApply(migrations, migrations[0:2], Down)
 	c.Assert(toApplyDown, HasLen, 2)
 	c.Assert(toApplyDown[0].Id, Equals, "2_cde")
 	c.Assert(toApplyDown[1].Id, Equals, "1_abc")

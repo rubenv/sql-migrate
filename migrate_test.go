@@ -360,6 +360,97 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, down)
 }
 
+func (s *SqliteMigrateSuite) TestMigrationWithMostRecentUnknown(c *C) {
+	up := "SELECT 0"
+	down := "SELECT 1"
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			&Migration{
+				Id:   "1",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+			&Migration{
+				Id:   "3",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+			&Migration{
+				Id:   "4",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+		},
+	}
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 3)
+
+	// remove "4" from our list of known migrations
+	migrations.Migrations = migrations.Migrations[0:2]
+
+	migrations.Migrations = append(migrations.Migrations, &Migration{
+		Id:   "2",
+		Up:   []string{up},
+		Down: []string{down},
+	}, &Migration{
+		Id:   "5",
+		Up:   []string{up},
+		Down: []string{down},
+	})
+
+	// apply the latest migration
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 2)
+	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
+	c.Assert(plannedMigrations[1].Migration.Id, Equals, "5")
+
+	// The most recent migration is unknown; we can't undo it
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 1)
+	c.Assert(err, Not(IsNil))
+}
+
+func (s *SqliteMigrateSuite) TestMigrationDownWithMiddleUnknown(c *C) {
+	up := "SELECT 0"
+	down := "SELECT 1"
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			&Migration{
+				Id:   "1",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+			&Migration{
+				Id:   "2",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+			&Migration{
+				Id:   "3",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+		},
+	}
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 3)
+
+	// remove "2" from our list of known migrations
+	migrations.Migrations = []*Migration{migrations.Migrations[0], migrations.Migrations[2]}
+
+	// undo "3"
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Down, 1)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 1)
+	c.Assert(plannedMigrations[0].Id, Equals, "3")
+
+	// will undo "3", then try "2", but "2" is unknown
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 2)
+	c.Assert(err, Not(IsNil))
+}
+
 func (s *SqliteMigrateSuite) TestLess(c *C) {
 	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "2"}), Equals, true)           // 1 less than 2
 	c.Assert((Migration{Id: "2"}).Less(&Migration{Id: "1"}), Equals, false)          // 2 not less than 1
