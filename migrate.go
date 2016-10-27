@@ -395,7 +395,8 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 // Searches the arrays for the latest elements with common ids.
 // Returns the indexes of the common id.
 func lastCommonMigration(left []*Migration, right []*Migration) (int, int) {
-	xIndexMatch := -1
+	const none = -1
+	xIndexMatch := none
 	yIndexMatch := 0
 	for i := 0; i < len(left); i++ {
 		existingId := left[i].Id
@@ -407,8 +408,9 @@ func lastCommonMigration(left []*Migration, right []*Migration) (int, int) {
 			}
 		}
 	}
-	if xIndexMatch == -1 {
-		return -1, -1 // We never found a match; the arrays have nothing in common
+	if xIndexMatch == none {
+		// We never found a match; the arrays have nothing in common
+		return none, none
 	}
 	return xIndexMatch, yIndexMatch
 }
