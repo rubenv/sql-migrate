@@ -67,6 +67,19 @@ func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
 	c.Assert(n, Equals, 0)
 }
 
+func (s *SqliteMigrateSuite) TestRunMigrationEscapeTable(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: sqliteMigrations[:1],
+	}
+
+	SetTable(`my migrations`)
+
+	// Executes one migration
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+}
+
 func (s *SqliteMigrateSuite) TestMigrateMultiple(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: sqliteMigrations[:2],
