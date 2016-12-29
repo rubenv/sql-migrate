@@ -56,37 +56,28 @@ func (s *SqlParseSuite) TestSemicolons(c *C) {
 func (s *SqlParseSuite) TestSplitStatements(c *C) {
 	type testData struct {
 		sql       string
-		direction bool
-		count     int
+		upCount   int
+		downCount int
 	}
 
 	tests := []testData{
 		{
 			sql:       functxt,
-			direction: true,
-			count:     2,
-		},
-		{
-			sql:       functxt,
-			direction: false,
-			count:     2,
+			upCount:   2,
+			downCount: 2,
 		},
 		{
 			sql:       multitxt,
-			direction: true,
-			count:     2,
-		},
-		{
-			sql:       multitxt,
-			direction: false,
-			count:     2,
+			upCount:   2,
+			downCount: 2,
 		},
 	}
 
 	for _, test := range tests {
-		stmts, err := SplitSQLStatements(strings.NewReader(test.sql), test.direction)
+		migration, err := ParseMigration(strings.NewReader(test.sql))
 		c.Assert(err, IsNil)
-		c.Assert(stmts, HasLen, test.count)
+		c.Assert(migration.UpStatements, HasLen, test.upCount)
+		c.Assert(migration.DownStatements, HasLen, test.downCount)
 	}
 }
 
