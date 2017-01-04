@@ -64,15 +64,6 @@ func SetSchema(name string) {
 	}
 }
 
-func getTableName() string {
-	t := tableName
-	if schemaName != "" {
-		t = fmt.Sprintf("%s.%s", schemaName, t)
-	}
-
-	return t
-}
-
 type Migration struct {
 	Id   string
 	Up   []string
@@ -357,7 +348,7 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	}
 
 	var migrationRecords []MigrationRecord
-	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", getTableName()))
+	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", dbMap.Dialect.QuotedTableForQuery(schemaName, tableName)))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -469,7 +460,7 @@ func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error)
 	}
 
 	var records []*MigrationRecord
-	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", getTableName())
+	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", dbMap.Dialect.QuotedTableForQuery(schemaName, tableName))
 	_, err = dbMap.Select(&records, query)
 	if err != nil {
 		return nil, err
