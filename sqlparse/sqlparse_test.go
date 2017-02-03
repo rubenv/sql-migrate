@@ -81,6 +81,13 @@ func (s *SqlParseSuite) TestSplitStatements(c *C) {
 	}
 }
 
+func (s *SqlParseSuite) TestIntentionallyBadStatements(c *C) {
+	for _, test := range intenionallyBad {
+		_, err := ParseMigration(strings.NewReader(test))
+		c.Assert(err, NotNil)
+	}
+}
+
 var functxt = `-- +migrate Up
 CREATE TABLE IF NOT EXISTS histories (
   id                BIGSERIAL  PRIMARY KEY,
@@ -140,3 +147,111 @@ CREATE TABLE fancier_post (
 -- +migrate Down
 DROP TABLE fancier_post;
 `
+
+// raise error when statements are not explicitly ended
+var intenionallyBad = []string{
+	// first statement missing terminator
+	`-- +migrate Up
+CREATE TABLE post (
+    id int NOT NULL,
+    title text,
+    body text,
+    PRIMARY KEY(id)
+)
+
+-- +migrate Down
+DROP TABLE post;
+
+-- +migrate Up
+CREATE TABLE fancier_post (
+    id int NOT NULL,
+    title text,
+    body text,
+    created_on timestamp without time zone,
+    PRIMARY KEY(id)
+);
+
+-- +migrate Down
+DROP TABLE fancier_post;
+`,
+
+	// second half of first statement missing terminator
+	`-- +migrate Up
+CREATE TABLE post (
+    id int NOT NULL,
+    title text,
+    body text,
+    PRIMARY KEY(id)
+);
+
+SELECT 'No ending semicolon'
+
+-- +migrate Down
+DROP TABLE post;
+
+-- +migrate Up
+CREATE TABLE fancier_post (
+    id int NOT NULL,
+    title text,
+    body text,
+    created_on timestamp without time zone,
+    PRIMARY KEY(id)
+);
+
+-- +migrate Down
+DROP TABLE fancier_post;
+`,
+
+	// second statement missing terminator
+	`-- +migrate Up
+CREATE TABLE post (
+    id int NOT NULL,
+    title text,
+    body text,
+    PRIMARY KEY(id)
+);
+
+-- +migrate Down
+DROP TABLE post
+
+-- +migrate Up
+CREATE TABLE fancier_post (
+    id int NOT NULL,
+    title text,
+    body text,
+    created_on timestamp without time zone,
+    PRIMARY KEY(id)
+);
+
+-- +migrate Down
+DROP TABLE fancier_post;
+`,
+
+	// trailing text after explicit StatementEnd
+	`-- +migrate Up
+-- +migrate StatementBegin
+CREATE TABLE post (
+    id int NOT NULL,
+    title text,
+    body text,
+    PRIMARY KEY(id)
+);
+-- +migrate StatementBegin
+SELECT 'no semicolon'
+
+-- +migrate Down
+DROP TABLE post;
+
+-- +migrate Up
+CREATE TABLE fancier_post (
+    id int NOT NULL,
+    title text,
+    body text,
+    created_on timestamp without time zone,
+    PRIMARY KEY(id)
+);
+
+-- +migrate Down
+DROP TABLE fancier_post;
+`,
+}

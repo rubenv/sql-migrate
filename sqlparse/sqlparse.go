@@ -22,6 +22,11 @@ type ParsedMigration struct {
 	DisableTransactionDown bool
 }
 
+var (
+	errNoTerminator = errors.New(`ERROR: The last statement must be ended by a semicolon or '-- +migrate StatementEnd' marker.
+			See https://github.com/rubenv/sql-migrate for details.`)
+)
+
 // Checks the line to see if the line has a statement-ending semicolon
 // or if the line contains a double-dash comment.
 func endsWithSemicolon(line string) bool {
@@ -119,6 +124,9 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 
 			switch cmd.Command {
 			case "Up":
+				if len(strings.TrimSpace(buf.String())) > 0 {
+					return nil, errNoTerminator
+				}
 				currentDirection = directionUp
 				if cmd.HasOption(optionNoTransaction) {
 					p.DisableTransactionUp = true
@@ -126,6 +134,9 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 				break
 
 			case "Down":
+				if len(strings.TrimSpace(buf.String())) > 0 {
+					return nil, errNoTerminator
+				}
 				currentDirection = directionDown
 				if cmd.HasOption(optionNoTransaction) {
 					p.DisableTransactionDown = true
@@ -187,6 +198,10 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 	if currentDirection == directionNone {
 		return nil, errors.New(`ERROR: no Up/Down annotations found, so no statements were executed.
 			See https://github.com/rubenv/sql-migrate for details.`)
+	}
+
+	if len(strings.TrimSpace(buf.String())) > 0 {
+		return nil, errNoTerminator
 	}
 
 	return p, nil
