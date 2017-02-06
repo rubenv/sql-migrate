@@ -157,6 +157,10 @@ DROP TABLE people;
 
 You can put multiple statements in each block, as long as you end them with a semicolon (`;`).
 
+You can alternatively set up a separator string that matches an entire line by setting `sqlparse.LineSeparator`. This
+can be used to imitate, for example, MS SQL Query Analyzer functionality where commands can be separated by a line with
+contents of `GO`. If `sqlparse.LineSeparator` is matched, it will not be included in the resulting migration scripts.
+
 If you have complex statements which contain semicolons, use `StatementBegin` and `StatementEnd` to indicate boundaries:
 
 ```sql

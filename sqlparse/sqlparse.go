@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 
 	"strings"
@@ -20,6 +21,25 @@ type ParsedMigration struct {
 
 	DisableTransactionUp   bool
 	DisableTransactionDown bool
+}
+
+var (
+	// LineSeparator can be used to split migrations by an exact line match. This line
+	// will be removed from the output. If left blank, it is not considered. It is defaulted
+	// to blank so you will have to set it manually.
+	// Use case: in MSSQL, it is convenient to separate commands by GO statements like in
+	// SQL Query Analyzer.
+	LineSeparator = ""
+)
+
+func errNoTerminator() error {
+	if len(LineSeparator) == 0 {
+		return errors.New(`ERROR: The last statement must be ended by a semicolon or '-- +migrate StatementEnd' marker.
+			See https://github.com/rubenv/sql-migrate for details.`)
+	}
+
+	return errors.New(fmt.Sprintf(`ERROR: The last statement must be ended by a semicolon, a line whose contents are %q, or '-- +migrate StatementEnd' marker.
+			See https://github.com/rubenv/sql-migrate for details.`, LineSeparator))
 }
 
 // Checks the line to see if the line has a statement-ending semicolon
@@ -119,6 +139,9 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 
 			switch cmd.Command {
 			case "Up":
+				if len(strings.TrimSpace(buf.String())) > 0 {
+					return nil, errNoTerminator()
+				}
 				currentDirection = directionUp
 				if cmd.HasOption(optionNoTransaction) {
 					p.DisableTransactionUp = true
@@ -126,6 +149,9 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 				break
 
 			case "Down":
+				if len(strings.TrimSpace(buf.String())) > 0 {
+					return nil, errNoTerminator()
+				}
 				currentDirection = directionDown
 				if cmd.HasOption(optionNoTransaction) {
 					p.DisableTransactionDown = true
@@ -151,14 +177,18 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 			continue
 		}
 
-		if _, err := buf.WriteString(line + "\n"); err != nil {
-			return nil, err
+		isLineSeparator := !ignoreSemicolons && len(LineSeparator) > 0 && line == LineSeparator
+
+		if !isLineSeparator {
+			if _, err := buf.WriteString(line + "\n"); err != nil {
+				return nil, err
+			}
 		}
 
 		// Wrap up the two supported cases: 1) basic with semicolon; 2) psql statement
 		// Lines that end with semicolon that are in a statement block
 		// do not conclude statement.
-		if (!ignoreSemicolons && endsWithSemicolon(line)) || statementEnded {
+		if (!ignoreSemicolons && (endsWithSemicolon(line) || isLineSeparator)) || statementEnded {
 			statementEnded = false
 			switch currentDirection {
 			case directionUp:
@@ -187,6 +217,10 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 	if currentDirection == directionNone {
 		return nil, errors.New(`ERROR: no Up/Down annotations found, so no statements were executed.
 			See https://github.com/rubenv/sql-migrate for details.`)
+	}
+
+	if len(strings.TrimSpace(buf.String())) > 0 {
+		return nil, errNoTerminator()
 	}
 
 	return p, nil
