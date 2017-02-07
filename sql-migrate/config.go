@@ -25,10 +25,24 @@ var dialects = map[string]gorp.Dialect{
 
 var ConfigFile string
 var ConfigEnvironment string
+var TimeFormatKey = "migration-prefix-timeformat"
+var DefaultTimeFormat = "20060201150405"
 
 func ConfigFlags(f *flag.FlagSet) {
 	f.StringVar(&ConfigFile, "config", "dbconfig.yml", "Configuration file to use.")
 	f.StringVar(&ConfigEnvironment, "env", "development", "Environment to use.")
+}
+
+type ConfigurationFile struct {
+	TimeFormat string                  `yaml:"migration-prefix-timeformat,omitempty"`
+	Envs       map[string]*Environment `yaml:",inline"`
+}
+
+func (c ConfigurationFile) GetTimeFormat() string {
+	if c.TimeFormat != "" {
+		return c.TimeFormat
+	}
+	return DefaultTimeFormat
 }
 
 type Environment struct {
@@ -37,18 +51,19 @@ type Environment struct {
 	Dir        string `yaml:"dir"`
 	TableName  string `yaml:"table"`
 	SchemaName string `yaml:"schema"`
+	TimeFormat string `yaml:"migration-prefix-timeformat,omitempty"`
 }
 
-func ReadConfig() (map[string]*Environment, error) {
+func ReadConfig() (ConfigurationFile, error) {
 	file, err := ioutil.ReadFile(ConfigFile)
 	if err != nil {
-		return nil, err
+		return ConfigurationFile{}, err
 	}
 
-	config := make(map[string]*Environment)
-	err = yaml.Unmarshal(file, config)
+	config := ConfigurationFile{}
+	err = yaml.Unmarshal(file, &config)
 	if err != nil {
-		return nil, err
+		return ConfigurationFile{}, err
 	}
 
 	return config, nil
@@ -59,8 +74,7 @@ func GetEnvironment() (*Environment, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	env := config[ConfigEnvironment]
+	env := config.Envs[ConfigEnvironment]
 	if env == nil {
 		return nil, errors.New("No environment: " + ConfigEnvironment)
 	}
@@ -86,6 +100,9 @@ func GetEnvironment() (*Environment, error) {
 		migrate.SetSchema(env.SchemaName)
 	}
 
+	if env.TimeFormat == "" {
+		env.TimeFormat = config.GetTimeFormat()
+	}
 	return env, nil
 }
 
