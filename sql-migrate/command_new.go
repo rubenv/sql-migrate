@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"path"
 	"strings"
 	"text/template"
 	"time"
@@ -75,8 +76,8 @@ func CreateMigration(name string) error {
 		return err
 	}
 
-	fileName := fmt.Sprintf("%d-%s.sql", time.Now().Unix(), strings.TrimSpace(name))
-	f, err := os.Create(fileName)
+	fileName := fmt.Sprintf("%s-%s.sql", time.Now().Format("20060201150405"), strings.TrimSpace(name))
+	f, err := os.Create(path.Join(env.Dir, fileName))
 
 	if err != nil {
 		return err
