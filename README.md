@@ -73,7 +73,7 @@ Options:
   -dryrun              Don't apply migrations, just print them.
 ```
 
-The `new` command creates a new empty migration template using the following pattern `<current epoch>-<name>.sql`.
+The `new` command creates a new empty migration template using the following pattern `<current time>-<name>.sql`.
 
 The `up` command applies all available migrations. By contrast, `down` will only apply one migration by default. This behavior can be changed for both by using the `-limit` parameter.
 
