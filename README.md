@@ -32,6 +32,7 @@ usage: sql-migrate [--version] [--help] <command> [<args>]
 
 Available commands are:
     down      Undo a database migration
+    new       Create a new migration
     redo      Reapply the last migration
     status    Show migration status
     up        Migrates the database to the most recent version available
@@ -71,6 +72,8 @@ Options:
   -limit=0             Limit the number of migrations (0 = unlimited).
   -dryrun              Don't apply migrations, just print them.
 ```
+
+The `new` command creates a new empty migration template using the following pattern `<current time>-<name>.sql`.
 
 The `up` command applies all available migrations. By contrast, `down` will only apply one migration by default. This behavior can be changed for both by using the `-limit` parameter.
 
