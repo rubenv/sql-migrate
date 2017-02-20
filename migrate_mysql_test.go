@@ -14,7 +14,7 @@ import (
 var enableMySQLFlag = flag.Bool("enable-mysql", false, "Perform mysql tests (default=false)")
 
 var (
-	testDBName = "test"
+	testDBName = "test_db"
 	testDBHost = "127.0.0.1"
 	testDBPort = "3306"
 	testDBUser = "root"
