@@ -4,19 +4,30 @@ import (
 	"database/sql"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/go-sql-driver/mysql"
 	. "gopkg.in/check.v1"
 	"gopkg.in/gorp.v1"
 )
 
-var disableSQLiteFlag = flag.Bool("disable-sqlite", true, "Disable sqlite tests (default=true)")
+var enableMySQLFlag = flag.Bool("enable-mysql", false, "Perform mysql tests (default=false)")
 
-var testDatabaseFile *os.File
-var sqliteMigrations = []*Migration{
+var (
+	testDBName = "test"
+	testDBHost = "127.0.0.1"
+	testDBPort = "3306"
+	testDBUser = "root"
+	testDBPass = ""
+
+	testDBDSN = fmt.Sprintf("%v:%v@tcp(%v:%v)/?parseTime=true&timeout=10s",
+		testDBUser, testDBPass, testDBHost, testDBPort)
+
+	testDBFullDSN = fmt.Sprintf("%v:%v@tcp(%v:%v)/%v?parseTime=true&timeout=10s",
+		testDBUser, testDBPass, testDBHost, testDBPort, testDBName)
+)
+
+var mysqlMigrations = []*Migration{
 	&Migration{
 		Id:   "123",
 		Up:   []string{"CREATE TABLE people (id int)"},
@@ -29,42 +40,56 @@ var sqliteMigrations = []*Migration{
 	},
 }
 
-type SqliteMigrateSuite struct {
+type MySQLMigrateSuite struct {
 	Db    *sql.DB
 	DbMap *gorp.DbMap
 }
 
-var _ = Suite(&SqliteMigrateSuite{})
+var _ = Suite(&MySQLMigrateSuite{})
 
-func (s *SqliteMigrateSuite) SetUpSuite(c *C) {
-	if !*disableSQLiteFlag {
-		c.Skip("Skipping sqlite tests due to '-disable-sqlite' flag being set")
+// Drop initial DB (if found)
+func (s *MySQLMigrateSuite) SetUpSuite(c *C) {
+	if !*enableMySQLFlag {
+		c.Skip("Skipping mysql tests due to -enable-mysql flag not being set")
 	}
+
+	db, err := sql.Open("mysql", testDBDSN)
+	c.Assert(err, IsNil)
+
+	db.Exec(fmt.Sprintf("DROP DATABASE `%v`", testDBName))
+	c.Assert(db.Close(), IsNil)
 }
 
-func (s *SqliteMigrateSuite) SetUpTest(c *C) {
-	var err error
-	testDatabaseFile, err = ioutil.TempFile("", "sql-migrate-sqlite")
+func (s *MySQLMigrateSuite) SetUpTest(c *C) {
+	// Initial connection without DB
+	initialDB, err := sql.Open("mysql", testDBDSN)
 	c.Assert(err, IsNil)
-	db, err := sql.Open("sqlite3", testDatabaseFile.Name())
+
+	_, dbCreateErr := initialDB.Exec(fmt.Sprintf("CREATE DATABASE `%v`", testDBName))
+	c.Assert(dbCreateErr, IsNil)
+
+	initialDB.Close()
+
+	// final connect
+	db, err := sql.Open("mysql", testDBFullDSN)
 	c.Assert(err, IsNil)
 
 	s.Db = db
-	s.DbMap = &gorp.DbMap{Db: db, Dialect: &gorp.SqliteDialect{}}
+	s.DbMap = &gorp.DbMap{Db: db, Dialect: &gorp.MySQLDialect{}}
 }
 
-func (s *SqliteMigrateSuite) TearDownTest(c *C) {
-	err := os.Remove(testDatabaseFile.Name())
+func (s *MySQLMigrateSuite) TearDownTest(c *C) {
+	_, err := s.Db.Exec(fmt.Sprintf("DROP DATABASE `%v`", testDBName))
 	c.Assert(err, IsNil)
 }
 
-func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
+func (s *MySQLMigrateSuite) TestRunMigration(c *C) {
 	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[:1],
+		Migrations: mysqlMigrations[:1],
 	}
 
 	// Executes one migration
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -73,31 +98,31 @@ func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
 	c.Assert(err, IsNil)
 
 	// Shouldn't apply migration again
-	n, err = Exec(s.Db, "sqlite3", migrations, Up)
+	n, err = Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
 
-func (s *SqliteMigrateSuite) TestRunMigrationEscapeTable(c *C) {
+func (s *MySQLMigrateSuite) TestRunMigrationEscapeTable(c *C) {
 	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[:1],
+		Migrations: mysqlMigrations[:1],
 	}
 
 	SetTable(`my migrations`)
 
 	// Executes one migration
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 }
 
-func (s *SqliteMigrateSuite) TestMigrateMultiple(c *C) {
+func (s *MySQLMigrateSuite) TestMigrateMultiple(c *C) {
 	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[:2],
+		Migrations: mysqlMigrations[:2],
 	}
 
 	// Executes two migrations
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -106,21 +131,115 @@ func (s *SqliteMigrateSuite) TestMigrateMultiple(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
+type execResult struct {
+	n   int
+	err error
+}
+
+func (s *MySQLMigrateSuite) concurrentMigrate(useLock bool, waitTime time.Duration) []*execResult {
 	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[:1],
+		Migrations: mysqlMigrations[:2],
+	}
+
+	numMigrate := 10
+	errChannel := make(chan *execResult, numMigrate)
+
+	for i := 1; i <= numMigrate; i++ {
+		go func() {
+			var n int
+			var err error
+
+			if useLock {
+				n, err = ExecWithLock(s.Db, "mysql", migrations, Up, time.Duration(waitTime))
+			} else {
+				n, err = Exec(s.Db, "mysql", migrations, Up)
+			}
+
+			errChannel <- &execResult{
+				n:   n,
+				err: err,
+			}
+		}()
+	}
+
+	var execResults []*execResult
+
+	for i := 1; i <= numMigrate; i++ {
+		result := <-errChannel
+		execResults = append(execResults, result)
+	}
+
+	return execResults
+}
+
+func (s *MySQLMigrateSuite) TestConcurrentMigrateWithoutLock(c *C) {
+	results := s.concurrentMigrate(false, time.Duration(1*time.Second))
+
+	var errorFound bool
+	var badIndex int
+
+	for i, v := range results {
+		if v.err != nil {
+			errorFound = true
+			badIndex = i
+			break
+		}
+	}
+
+	// Concurrent migrates with Exec() should run into at least 1 failure
+	c.Assert(errorFound, Equals, true)
+	c.Assert(results[badIndex].err, NotNil)
+}
+
+func (s *MySQLMigrateSuite) TestConcurrentMigrateWithLock(c *C) {
+	results := s.concurrentMigrate(true, time.Duration(5*time.Second))
+
+	var errorFound bool
+
+	for _, v := range results {
+		if v.err != nil {
+			errorFound = true
+		}
+	}
+
+	// Concurrent migrates with ExecWithLock() should NOT run into any errors
+	c.Assert(errorFound, Equals, false)
+}
+
+func (s *MySQLMigrateSuite) TestConcurrentMigrateWithLockShortWaitTime(c *C) {
+	results := s.concurrentMigrate(true, time.Duration(500*time.Nanosecond))
+
+	var errorFound bool
+	var badIndex int
+
+	for i, v := range results {
+		if v.err != nil {
+			errorFound = true
+			badIndex = i
+		}
+	}
+
+	// Concurrent migrates with ExecWithLock but too low of a waittime should
+	// result in at least 1 failure
+	c.Assert(errorFound, Equals, true)
+	c.Assert(results[badIndex].err, ErrorMatches, "Exceeded lock clearance wait time.+")
+}
+
+func (s *MySQLMigrateSuite) TestMigrateIncremental(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: mysqlMigrations[:1],
 	}
 
 	// Executes one migration
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
 	// Execute a new migration
 	migrations = &MemoryMigrationSource{
-		Migrations: sqliteMigrations[:2],
+		Migrations: mysqlMigrations[:2],
 	}
-	n, err = Exec(s.Db, "sqlite3", migrations, Up)
+	n, err = Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -129,13 +248,13 @@ func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 	c.Assert(err, IsNil)
 }
 
-func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
+func (s *MySQLMigrateSuite) TestFileMigrate(c *C) {
 	migrations := &FileMigrationSource{
 		Dir: "test-migrations",
 	}
 
 	// Executes two migrations
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -145,7 +264,7 @@ func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
 	c.Assert(id, Equals, int64(1))
 }
 
-func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
+func (s *MySQLMigrateSuite) TestAssetMigrate(c *C) {
 	migrations := &AssetMigrationSource{
 		Asset:    Asset,
 		AssetDir: AssetDir,
@@ -153,7 +272,7 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 	}
 
 	// Executes two migrations
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -163,13 +282,13 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 	c.Assert(id, Equals, int64(1))
 }
 
-func (s *SqliteMigrateSuite) TestMigrateMax(c *C) {
+func (s *MySQLMigrateSuite) TestMigrateMax(c *C) {
 	migrations := &FileMigrationSource{
 		Dir: "test-migrations",
 	}
 
 	// Executes one migration
-	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 1)
+	n, err := ExecMax(s.Db, "mysql", migrations, Up, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -178,12 +297,12 @@ func (s *SqliteMigrateSuite) TestMigrateMax(c *C) {
 	c.Assert(id, Equals, int64(0))
 }
 
-func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
+func (s *MySQLMigrateSuite) TestMigrateDown(c *C) {
 	migrations := &FileMigrationSource{
 		Dir: "test-migrations",
 	}
 
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -193,7 +312,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(id, Equals, int64(1))
 
 	// Undo the last one
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
+	n, err = ExecMax(s.Db, "mysql", migrations, Down, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -203,7 +322,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(id, Equals, int64(0))
 
 	// Remove the table.
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
+	n, err = ExecMax(s.Db, "mysql", migrations, Down, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -212,17 +331,17 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(err, Not(IsNil))
 
 	// Nothing left to do.
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
+	n, err = ExecMax(s.Db, "mysql", migrations, Down, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
 
-func (s *SqliteMigrateSuite) TestMigrateDownFull(c *C) {
+func (s *MySQLMigrateSuite) TestMigrateDownFull(c *C) {
 	migrations := &FileMigrationSource{
 		Dir: "test-migrations",
 	}
 
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -232,7 +351,7 @@ func (s *SqliteMigrateSuite) TestMigrateDownFull(c *C) {
 	c.Assert(id, Equals, int64(1))
 
 	// Undo the last one
-	n, err = Exec(s.Db, "sqlite3", migrations, Down)
+	n, err = Exec(s.Db, "mysql", migrations, Down)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -241,16 +360,16 @@ func (s *SqliteMigrateSuite) TestMigrateDownFull(c *C) {
 	c.Assert(err, Not(IsNil))
 
 	// Nothing left to do.
-	n, err = Exec(s.Db, "sqlite3", migrations, Down)
+	n, err = Exec(s.Db, "mysql", migrations, Down)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
 
-func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
+func (s *MySQLMigrateSuite) TestMigrateTransaction(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			sqliteMigrations[0],
-			sqliteMigrations[1],
+			mysqlMigrations[0],
+			mysqlMigrations[1],
 			&Migration{
 				Id:   "125",
 				Up:   []string{"INSERT INTO people (id, first_name) VALUES (1, 'Test')", "SELECT fail"},
@@ -260,7 +379,7 @@ func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
 	}
 
 	// Should fail, transaction should roll back the INSERT.
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, Not(IsNil))
 	c.Assert(n, Equals, 2)
 
@@ -270,70 +389,7 @@ func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
 	c.Assert(count, Equals, int64(0))
 }
 
-func (s *SqliteMigrateSuite) TestRemoveStaleLock(c *C) {
-	// create temp lock table
-	s.DbMap.AddTableWithNameAndSchema(LockRecord{}, "", lockTableName).SetKeys(false, "Lock").ColMap("Lock").SetUnique(true)
-	err := s.DbMap.CreateTablesIfNotExists()
-	c.Assert(err, IsNil)
-
-	mlock := &migrationLock{
-		dbMap: s.DbMap,
-	}
-
-	// insert stale lock
-	s.DbMap.Insert(&LockRecord{
-		Lock:       lockName,
-		AcquiredAt: time.Now().Add(-(1 * time.Hour)),
-	})
-
-	err1 := mlock.removeStaleLock()
-	c.Assert(err1, IsNil)
-
-	var lockRecord LockRecord
-
-	selectErr1 := s.DbMap.SelectOne(&lockRecord, fmt.Sprintf("SELECT * FROM %v", lockTableName))
-
-	// Old lock should be removed
-	c.Assert(selectErr1, Equals, sql.ErrNoRows)
-	c.Assert(lockRecord.Lock, Equals, "")
-
-	// insert non-expired lock
-	s.DbMap.Insert(&LockRecord{
-		Lock:       lockName,
-		AcquiredAt: time.Now(),
-	})
-
-	err = mlock.removeStaleLock()
-	c.Assert(err, IsNil)
-
-	selectErr2 := s.DbMap.SelectOne(&lockRecord, fmt.Sprintf("SELECT * FROM %v", lockTableName))
-
-	c.Assert(selectErr2, IsNil)
-	c.Assert(lockRecord, NotNil)
-	c.Assert(lockRecord.Lock, Equals, lockName)
-}
-
-func (s *SqliteMigrateSuite) TestExecMaxWithLock(c *C) {
-	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[:2],
-	}
-
-	n, err := ExecMaxWithLock(s.Db, "sqlite3", migrations, Up, 0, time.Duration(1*time.Second))
-	c.Assert(err, ErrorMatches, "ExecWithLock does not support sqlite3 dialect")
-	c.Assert(n, Equals, 0)
-}
-
-func (s *SqliteMigrateSuite) TestExecWithLock(c *C) {
-	migrations := &MemoryMigrationSource{
-		Migrations: sqliteMigrations[:2],
-	}
-
-	n, err := ExecWithLock(s.Db, "sqlite3", migrations, Up, time.Duration(1*time.Second))
-	c.Assert(err, ErrorMatches, "ExecWithLock does not support sqlite3 dialect")
-	c.Assert(n, Equals, 0)
-}
-
-func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
+func (s *MySQLMigrateSuite) TestPlanMigration(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
 			&Migration{
@@ -353,7 +409,7 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 			},
 		},
 	}
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 3)
 
@@ -363,12 +419,12 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
-	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	plannedMigrations, _, err := PlanMigration(s.Db, "mysql", migrations, Up, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 1)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[3])
 
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0)
+	plannedMigrations, _, err = PlanMigration(s.Db, "mysql", migrations, Down, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[2])
@@ -376,7 +432,7 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	c.Assert(plannedMigrations[2].Migration, Equals, migrations.Migrations[0])
 }
 
-func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
+func (s *MySQLMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	up := "SELECT 0"
 	down := "SELECT 1"
 	migrations := &MemoryMigrationSource{
@@ -393,7 +449,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 			},
 		},
 	}
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	n, err := Exec(s.Db, "mysql", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -416,7 +472,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	})
 
 	// apply all the missing migrations
-	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	plannedMigrations, _, err := PlanMigration(s.Db, "mysql", migrations, Up, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -427,7 +483,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, up)
 
 	// first catch up to current target state 123, then migrate down 1 step to 12
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 1)
+	plannedMigrations, _, err = PlanMigration(s.Db, "mysql", migrations, Down, 1)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 2)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -436,7 +492,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[1].Queries[0], Equals, down)
 
 	// first catch up to current target state 123, then migrate down 2 steps to 1
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 2)
+	plannedMigrations, _, err = PlanMigration(s.Db, "mysql", migrations, Down, 2)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -447,7 +503,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, down)
 }
 
-func (s *SqliteMigrateSuite) TestLess(c *C) {
+func (s *MySQLMigrateSuite) TestLess(c *C) {
 	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "2"}), Equals, true)           // 1 less than 2
 	c.Assert((Migration{Id: "2"}).Less(&Migration{Id: "1"}), Equals, false)          // 2 not less than 1
 	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "a"}), Equals, true)           // 1 less than a
