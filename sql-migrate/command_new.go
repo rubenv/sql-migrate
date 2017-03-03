@@ -59,7 +59,7 @@ func (c *NewCommand) Run(args []string) int {
 		return 1
 	}
 
-	if err := CreateMigration(args[0]); err != nil {
+	if err := CreateMigration(cmdFlags.Arg(0)); err != nil {
 		ui.Error(err.Error())
 		return 1
 	}
