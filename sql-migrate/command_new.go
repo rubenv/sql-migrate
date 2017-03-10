@@ -45,7 +45,7 @@ func (c *NewCommand) Synopsis() string {
 }
 
 func (c *NewCommand) Run(args []string) int {
-	cmdFlags := flag.NewFlagSet("redo", flag.ContinueOnError)
+	cmdFlags := flag.NewFlagSet("new", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
 	ConfigFlags(cmdFlags)
 
