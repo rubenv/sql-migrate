@@ -8,11 +8,6 @@ mysql:
     datasource: root@/test?parseTime=true
     dir: test-migrations
 
-mysql_noflag:
-    dialect: mysql
-    datasource: root@/test
-    dir: test-migrations
-
 mysql_env:
     dialect: mysql
     datasource: ${MYSQL_USER}@/$DATABASE?parseTime=true

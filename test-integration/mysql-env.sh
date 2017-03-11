@@ -4,7 +4,7 @@
 export PATH=$PATH:$HOME/gopath/bin
 
 export MYSQL_USER=root
-export DATABASE=test
+export DATABASE=test_env
 
 OPTIONS="-config=test-integration/dbconfig.yml -env mysql_env"
 
