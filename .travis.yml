@@ -12,6 +12,7 @@ services:
 
 before_install:
     - mysql -e "CREATE DATABASE IF NOT EXISTS test;" -uroot
+    - mysql -e "CREATE DATABASE IF NOT EXISTS test_env;" -uroot
     - psql -c "CREATE DATABASE test;" -U postgres
 
 install:
@@ -23,4 +24,5 @@ script:
     - bash test-integration/postgres.sh
     - bash test-integration/mysql.sh
     - bash test-integration/mysql-flag.sh
+    - bash test-integration/mysql-env.sh
     - bash test-integration/sqlite.sh
