@@ -10,7 +10,7 @@ mysql:
 
 mysql_noflag:
     dialect: mysql
-    datasource: ${MYSQL_USER}@/$DATABASE
+    datasource: root@/test
     dir: test-migrations
 
 mysql_env:
