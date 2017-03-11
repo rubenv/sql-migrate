@@ -25,7 +25,9 @@ go get github.com/rubenv/sql-migrate/...
 ```
 
 ## Usage
+
 ### As a standalone tool
+
 ```
 $ sql-migrate --help
 usage: sql-migrate [--version] [--help] <command> [<args>]
@@ -91,7 +93,22 @@ $ sql-migrate status
 +---------------+-----------------------------------------+
 ```
 
+### MySQL Caveat
+
+If you are using MySQL, you must append `?parseTime=true` to the `datasource` configuration. For example:
+
+```yml
+production:
+    dialect: mysql
+    datasource: root@/test?parseTime=true
+    dir: migrations/mysql
+    table: migrations
+```
+
+See [here](https://github.com/go-sql-driver/mysql#parsetime) for an explanation of what this does.
+
 ### As a library
+
 Import sql-migrate into your application:
 
 ```go
@@ -227,6 +244,7 @@ Both `Asset` and `AssetDir` are functions provided by bindata.
 Then proceed as usual.
 
 ## Extending
+
 Adding a new migration source means implementing `MigrationSource`.
 
 ```go
