@@ -482,7 +482,8 @@ func getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
 		var out *time.Time
 		err := db.QueryRow("SELECT NOW()").Scan(&out)
 		if err != nil {
-			if err.Error() == "sql: Scan error on column index 0: unsupported driver -> Scan pair: []uint8 -> *time.Time" {
+			if err.Error() == "sql: Scan error on column index 0: unsupported driver -> Scan pair: []uint8 -> *time.Time" ||
+				err.Error() == "sql: Scan error on column index 0: unsupported Scan, storing driver.Value type []uint8 into type *time.Time" {
 				return nil, errors.New(`Cannot parse dates.
 
 Make sure that the parseTime option is supplied to your database connection.
