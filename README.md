@@ -92,6 +92,37 @@ $ sql-migrate status
 | 2_record.sql  | no                                      |
 +---------------+-----------------------------------------+
 ```
+#### Migration Prefix
+
+The `new` command will prefix the generated `.sql` files. This prefix is created using the 
+the [Format](https://golang.org/pkg/time/#Time.Format) function of the golang `time` package. 
+
+You can change the format globally or per environment using the `migration-prefix-timeformat`.
+
+If an environment does not define a format, he will the the global one.
+If no format is defined globally, the default one is used.
+The default format is `20060201150405`.
+
+```yml
+# If specified, it will override 
+# the global format.
+migration-prefix-timeformat: "20060201150405"
+
+# Development will use its
+# own format.
+development:
+    dialect: sqlite3
+    datasource: test.db
+    dir: migrations
+    migration-prefix-timeformat: "2006"
+
+# production will use the global format.
+production:
+    dialect: postgres
+    datasource: dbname=myapp sslmode=disable
+    dir: migrations/postgres
+    table: migrations
+```
 
 ### MySQL Caveat
 
