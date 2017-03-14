@@ -76,7 +76,7 @@ func CreateMigration(name string) error {
 		return err
 	}
 
-	fileName := fmt.Sprintf("%s-%s.sql", time.Now().Format("20060201150405"), strings.TrimSpace(name))
+	fileName := fmt.Sprintf("%s-%s.sql", time.Now().Format("20060102150405"), strings.TrimSpace(name))
 	f, err := os.Create(path.Join(env.Dir, fileName))
 
 	if err != nil {
