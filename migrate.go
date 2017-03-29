@@ -117,7 +117,7 @@ func (b byId) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b byId) Less(i, j int) bool { return b[i].Less(b[j]) }
 
 type MigrationRecord struct {
-	Id        string    `db:"id"`
+	Id        string    `db:"id,size:450"`
 	AppliedAt time.Time `db:"applied_at"`
 }
 
