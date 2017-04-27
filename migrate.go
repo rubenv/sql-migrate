@@ -349,7 +349,7 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 
 	var migrationRecords []MigrationRecord
 	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", dbMap.Dialect.QuotedTableForQuery(schemaName, tableName)))
-	if err != nil {
+	if err != nil && !gorp.NonFatalError(err) {
 		return nil, nil, err
 	}
 
