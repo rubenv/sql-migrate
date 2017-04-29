@@ -174,12 +174,12 @@ func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
 		if strings.HasSuffix(info.Name(), ".sql") {
 			file, err := os.Open(path.Join(f.Dir, info.Name()))
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Error while opening %s : %s", info.Name(), err)
 			}
 
 			migration, err := ParseMigration(info.Name(), file)
 			if err != nil {
-				return nil, err
+				return nil, fmt.Errorf("Error while parsing %s : %s", info.Name(), err)
 			}
 
 			migrations = append(migrations, migration)
