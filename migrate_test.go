@@ -3,6 +3,7 @@ package migrate
 import (
 	"database/sql"
 	"io/ioutil"
+	"net/http"
 	"os"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -121,6 +122,22 @@ func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
 	migrations := &FileMigrationSource{
 		Dir: "test-migrations",
+	}
+
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+}
+
+func (s *SqliteMigrateSuite) TestHttpFileSystemMigrate(c *C) {
+	migrations := &HttpFileSystemMigrationSource{
+		FileSystem: http.Dir("test-migrations"),
 	}
 
 	// Executes two migrations
