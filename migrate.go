@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"os"
+	"net/http"
 	"path"
 	"regexp"
 	"sort"
@@ -150,6 +150,18 @@ func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	return m.Migrations, nil
 }
 
+// A set of migrations loaded from an http.FileServer
+
+type HttpFileSystemMigrationSource struct {
+	FileSystem http.FileSystem
+}
+
+var _ MigrationSource = (*HttpFileSystemMigrationSource)(nil)
+
+func (f HttpFileSystemMigrationSource) FindMigrations() ([]*Migration, error) {
+	return findMigrations(f.FileSystem)
+}
+
 // A set of migrations loaded from a directory.
 type FileMigrationSource struct {
 	Dir string
@@ -158,9 +170,14 @@ type FileMigrationSource struct {
 var _ MigrationSource = (*FileMigrationSource)(nil)
 
 func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
+	filesystem := http.Dir(f.Dir)
+	return findMigrations(filesystem)
+}
+
+func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 	migrations := make([]*Migration, 0)
 
-	file, err := os.Open(f.Dir)
+	file, err := dir.Open("/")
 	if err != nil {
 		return nil, err
 	}
@@ -172,7 +189,7 @@ func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
 
 	for _, info := range files {
 		if strings.HasSuffix(info.Name(), ".sql") {
-			file, err := os.Open(path.Join(f.Dir, info.Name()))
+			file, err := dir.Open(info.Name())
 			if err != nil {
 				return nil, err
 			}
