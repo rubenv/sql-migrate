@@ -88,6 +88,13 @@ func (s *SqlParseSuite) TestIntentionallyBadStatements(c *C) {
 	}
 }
 
+func (s *SqlParseSuite) TestJustComment(c *C) {
+	for _, test := range justAComment {
+		_, err := ParseMigration(strings.NewReader(test))
+		c.Assert(err, NotNil)
+	}
+}
+
 func (s *SqlParseSuite) TestCustomTerminator(c *C) {
 	LineSeparator = "GO"
 	defer func() { LineSeparator = "" }()
@@ -356,3 +363,17 @@ GO
 DROP TABLE fancier_post
 GO
 `
+
+// test a comment without sql instruction
+var justAComment = []string{
+	`-- +migrate Up
+CREATE TABLE post (
+    id int NOT NULL,
+    title text,
+    body text,
+    PRIMARY KEY(id)
+)
+
+-- +migrate Down
+-- no migration here
+`}

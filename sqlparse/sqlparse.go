@@ -129,6 +129,10 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 
 	for scanner.Scan() {
 		line := scanner.Text()
+		// ignore comment except beginning with '-- +'
+		if strings.HasPrefix(line, "-- ") && !strings.HasPrefix(line, "-- +") {
+			continue
+		}
 
 		// handle any migrate-specific commands
 		if strings.HasPrefix(line, sqlCmdPrefix) {
@@ -179,7 +183,7 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 
 		isLineSeparator := !ignoreSemicolons && len(LineSeparator) > 0 && line == LineSeparator
 
-		if !isLineSeparator {
+		if !isLineSeparator && !strings.HasPrefix(line, "-- +") {
 			if _, err := buf.WriteString(line + "\n"); err != nil {
 				return nil, err
 			}
@@ -219,7 +223,10 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 			See https://github.com/rubenv/sql-migrate for details.`)
 	}
 
-	if len(strings.TrimSpace(buf.String())) > 0 {
+	// allow comment without sql instruction. Example:
+	// -- +migrate Down
+	// -- nothing to downgrade!
+	if len(strings.TrimSpace(buf.String())) > 0 && !strings.HasPrefix(buf.String(), "-- +") {
 		return nil, errNoTerminator()
 	}
 
