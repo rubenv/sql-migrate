@@ -410,3 +410,23 @@ func (s *SqliteMigrateSuite) TestLess(c *C) {
 		Less(&Migration{Id: "20160126_1100"}), Equals, false)
 
 }
+
+func (s *SqliteMigrateSuite) TestCustomMigrationRecord(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: sqliteMigrations[:1],
+	}
+
+	type CustomMigrationRecord struct {
+		MigrationRecord
+		Author string `db:"author"`
+	}
+
+	dbMap := gorp.DbMap{Db: s.Db, Dialect: gorp.SqliteDialect{}}
+	dbMap.AddTableWithNameAndSchema(CustomMigrationRecord{}, "", tableName).SetKeys(false, "Id")
+
+	err := dbMap.CreateTables()
+	c.Assert(err, IsNil)
+
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 1)
+	c.Assert(err, IsNil)
+}
