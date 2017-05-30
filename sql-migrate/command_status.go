@@ -77,17 +77,22 @@ func (c *StatusCommand) Run(args []string) int {
 
 	for _, m := range migrations {
 		rows[m.Id] = &statusRow{
-			Id:       m.Id,
-			Migrated: false,
+			Id: m.Id,
 		}
 	}
 
 	for _, r := range records {
+		if _, ok := rows[r.Id]; !ok {
+			continue
+		}
 		rows[r.Id].Migrated = true
 		rows[r.Id].AppliedAt = r.AppliedAt
 	}
 
 	for _, m := range migrations {
+		if _, ok := rows[m.Id]; !ok {
+			continue
+		}
 		if rows[m.Id].Migrated {
 			table.Append([]string{
 				m.Id,
