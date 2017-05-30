@@ -327,6 +327,10 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 				AppliedAt: time.Now(),
 			})
 			if err != nil {
+				if trans, ok := executor.(*gorp.Transaction); ok {
+					trans.Rollback()
+				}
+
 				return applied, newTxError(migration, err)
 			}
 		} else if dir == Down {
@@ -334,6 +338,10 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 				Id: migration.Id,
 			})
 			if err != nil {
+				if trans, ok := executor.(*gorp.Transaction); ok {
+					trans.Rollback()
+				}
+
 				return applied, newTxError(migration, err)
 			}
 		} else {
