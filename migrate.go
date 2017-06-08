@@ -261,7 +261,7 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 
 	parsed, err := sqlparse.ParseMigration(r)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Error parsing migration (%s): %s", id, err)
 	}
 
 	m.Up = parsed.UpStatements
