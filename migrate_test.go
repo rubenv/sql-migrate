@@ -8,7 +8,7 @@ import (
 
 	_ "github.com/mattn/go-sqlite3"
 	. "gopkg.in/check.v1"
-	"gopkg.in/gorp.v1"
+	"gopkg.in/gorp.v2"
 )
 
 var testDatabaseFile *os.File

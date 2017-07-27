@@ -9,7 +9,7 @@ import (
 	"os"
 
 	"github.com/rubenv/sql-migrate"
-	"gopkg.in/gorp.v1"
+	"gopkg.in/gorp.v2"
 	"gopkg.in/yaml.v2"
 
 	_ "github.com/go-sql-driver/mysql"
