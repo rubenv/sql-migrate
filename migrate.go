@@ -321,7 +321,8 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 			}
 		}
 
-		if dir == Up {
+		switch dir {
+		case Up:
 			err = executor.Insert(&MigrationRecord{
 				Id:        migration.Id,
 				AppliedAt: time.Now(),
@@ -333,7 +334,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 
 				return applied, newTxError(migration, err)
 			}
-		} else if dir == Down {
+		case Down:
 			_, err := executor.Delete(&MigrationRecord{
 				Id: migration.Id,
 			})
@@ -344,7 +345,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 
 				return applied, newTxError(migration, err)
 			}
-		} else {
+		default:
 			panic("Not possible")
 		}
 
