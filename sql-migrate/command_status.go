@@ -83,8 +83,13 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	for _, r := range records {
-		rows[r.Id].Migrated = true
-		rows[r.Id].AppliedAt = r.AppliedAt
+		status, ok := rows[r.Id]
+		if !ok {
+			ui.Warn(fmt.Sprintf("Migration in database %q unknown to sql-migrate; it will not be possible to migrate down this migration", r.Id))
+			continue
+		}
+		status.Migrated = true
+		status.AppliedAt = r.AppliedAt
 	}
 
 	for _, m := range migrations {

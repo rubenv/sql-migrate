@@ -401,9 +401,8 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	if len(existingMigrations) > 0 {
 		result = append(result, ToCatchup(migrations, existingMigrations, record)...)
 	}
-
 	// Figure out which migrations to apply
-	toApply := ToApply(migrations, record.Id, dir)
+	toApply := ToApply(migrations, existingMigrations, dir)
 	toApplyCount := len(toApply)
 	if max > 0 && max < toApplyCount {
 		toApplyCount = max
@@ -417,6 +416,10 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 				DisableTransaction: v.DisableTransactionUp,
 			})
 		} else if dir == Down {
+			if v.Down == nil {
+				// This happens if we are trying to migrate down a migration unknown to us
+				return nil, nil, fmt.Errorf("Unable to undo unknown migration %q", v.Id)
+			}
 			result = append(result, &PlannedMigration{
 				Migration:          v,
 				Queries:            v.Down,
@@ -428,34 +431,86 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	return result, dbMap, nil
 }
 
-// Filter a slice of migrations into ones that should be applied.
-func ToApply(migrations []*Migration, current string, direction MigrationDirection) []*Migration {
-	var index = -1
-	if current != "" {
-		for index < len(migrations)-1 {
-			index++
-			if migrations[index].Id == current {
+// Searches the arrays for the latest elements with common ids.
+// Returns the indexes of the common id.
+func lastCommonMigration(left []*Migration, right []*Migration) (int, int) {
+	const none = -1
+	xIndexMatch := none
+	yIndexMatch := 0
+	for i := 0; i < len(left); i++ {
+		existingId := left[i].Id
+		for j := yIndexMatch; j < len(right); j++ {
+			if right[j].Id == existingId {
+				xIndexMatch = i
+				yIndexMatch = j
 				break
 			}
 		}
 	}
+	if xIndexMatch == none {
+		// We never found a match; the arrays have nothing in common
+		return none, none
+	}
+	return xIndexMatch, yIndexMatch
+}
 
+// Filter a slice of migrations into ones that should be applied.
+func ToApply(migrations, existingMigrations []*Migration, direction MigrationDirection) []*Migration {
 	if direction == Up {
-		return migrations[index+1:]
-	} else if direction == Down {
-		if index == -1 {
-			return []*Migration{}
-		}
+		return toApplyUp(migrations, existingMigrations)
+	}
+	if direction == Down {
+		return toApplyDown(migrations, existingMigrations)
+	}
+	panic("Unknown direction")
+}
 
-		// Add in reverse order
-		toApply := make([]*Migration, index+1)
-		for i := 0; i < index+1; i++ {
-			toApply[index-i] = migrations[i]
-		}
-		return toApply
+func toApplyUp(migrations, existingMigrations []*Migration) []*Migration {
+	if len(existingMigrations) == 0 {
+		return migrations
+	}
+	// All migrations after the last common migration need to be applied to the db.
+	// It's possible that there are some existingMigrations unknown to us--
+	// we'll just ignore them and hope they don't matter.
+	_, index := lastCommonMigration(existingMigrations, migrations)
+	return migrations[index+1:]
+}
+
+func toApplyDown(migrations, existingMigrations []*Migration) []*Migration {
+	if len(existingMigrations) == 0 {
+		return []*Migration{}
+	}
+	allMigrations := mergeMigrations(existingMigrations, migrations)
+	_, index := lastCommonMigration(existingMigrations, allMigrations)
+	// Add in reverse order
+	toApply := make([]*Migration, index+1)
+	for i := 0; i < index+1; i++ {
+		toApply[index-i] = allMigrations[i]
+	}
+	return toApply
+}
+
+// Returns a list of all migrations in either list, sorted by Id.
+// Migrations present only in existingMigrations will not have Up or Down set.
+func mergeMigrations(existingMigrations, migrations []*Migration) []*Migration {
+	migrationsMap := map[string]*Migration{}
+	for _, m := range existingMigrations {
+		migrationsMap[m.Id] = m
+	}
+	// When a Migration appears in both existingMigrations and migrations,
+	// we want the Migration from migrations, since only that list has
+	// the Up and Down fields set
+	for _, m := range migrations {
+		migrationsMap[m.Id] = m
 	}
 
-	panic("Not possible")
+	// Flatten our map back into a list that we can sort
+	allMigrations := make([]*Migration, 0, len(migrationsMap))
+	for _, m := range migrationsMap {
+		allMigrations = append(allMigrations, m)
+	}
+	sort.Sort(byId(allMigrations))
+	return allMigrations
 }
 
 func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) []*PlannedMigration {
