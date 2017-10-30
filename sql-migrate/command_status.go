@@ -83,8 +83,10 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	for _, r := range records {
-		rows[r.Id].Migrated = true
-		rows[r.Id].AppliedAt = r.AppliedAt
+		if _, ok := rows[r.Id]; ok {
+			rows[r.Id].Migrated = true
+			rows[r.Id].AppliedAt = r.AppliedAt
+		}
 	}
 
 	for _, m := range migrations {
