@@ -83,12 +83,17 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	for _, r := range records {
+		if rows[r.Id] == nil {
+			ui.Warn(fmt.Sprintf("Could not find migration file: %v", r.Id))
+			continue
+		}
+
 		rows[r.Id].Migrated = true
 		rows[r.Id].AppliedAt = r.AppliedAt
 	}
 
 	for _, m := range migrations {
-		if rows[m.Id].Migrated {
+		if rows[m.Id] != nil && rows[m.Id].Migrated {
 			table.Append([]string{
 				m.Id,
 				rows[m.Id].AppliedAt.String(),
