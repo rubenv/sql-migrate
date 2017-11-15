@@ -48,7 +48,6 @@ func endsWithSemicolon(line string) bool {
 
 	prev := ""
 	scanner := bufio.NewScanner(strings.NewReader(line))
-	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	scanner.Split(bufio.ScanWords)
 
 	for scanner.Scan() {
@@ -123,6 +122,7 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 
 	var buf bytes.Buffer
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 
 	statementEnded := false
 	ignoreSemicolons := false
