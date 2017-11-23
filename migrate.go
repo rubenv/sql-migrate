@@ -144,10 +144,13 @@ type MemoryMigrationSource struct {
 var _ MigrationSource = (*MemoryMigrationSource)(nil)
 
 func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
-	// Make sure migrations are sorted
-	sort.Sort(byId(m.Migrations))
-
-	return m.Migrations, nil
+	// Make sure migrations are sorted. In order to make the MemoryMigrationSource safe for
+	// concurrent use we should not mutate it in place. So `FindMigrations` would sort a copy
+	// of the m.Migrations.
+	migrations := make([]*Migration, len(m.Migrations))
+	copy(migrations, m.Migrations)
+	sort.Sort(byId(migrations))
+	return migrations, nil
 }
 
 // A set of migrations loaded from an http.FileServer
