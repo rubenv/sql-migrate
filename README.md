@@ -216,9 +216,9 @@ CREATE UNIQUE INDEX people_unique_id_idx CONCURRENTLY ON people (id);
 DROP INDEX people_unique_id_idx;
 ```
 
-## Embedding migrations with [bindata](https://github.com/jteeuwen/go-bindata)
+## Embedding migrations with [bindata](https://github.com/shuLhan/go-bindata)
 
-If you like your Go applications self-contained (that is: a single binary): use [bindata](https://github.com/jteeuwen/go-bindata) to embed the migration files.
+If you like your Go applications self-contained (that is: a single binary): use [bindata](https://github.com/shuLhan/go-bindata) to embed the migration files.
 
 Just write your migration files as usual, as a set of SQL files in a folder.
 
