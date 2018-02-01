@@ -431,6 +431,82 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	return result, dbMap, nil
 }
 
+// Skip a set of migrations
+//
+// Will skip at most `max` migrations. Pass 0 for no limit.
+//
+// Returns the number of skipped migrations.
+//func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max)
+	if err != nil {
+		return 0, err
+	}
+
+	// Apply migrations
+	applied := 0
+	for _, migration := range migrations {
+		var executor SqlExecutor
+
+		if migration.DisableTransaction {
+			executor = dbMap
+		} else {
+			executor, err = dbMap.Begin()
+			if err != nil {
+				return applied, newTxError(migration, err)
+			}
+		}
+
+		// for _, stmt := range migration.Queries {
+		// 	// if _, err := executor.Exec(stmt); err != nil {
+		// 		// if trans, ok := executor.(*gorp.Transaction); ok {
+		// 		// 	trans.Rollback()
+		// 		// }
+    //
+		// 		return applied, newTxError(migration, err)
+		// 	}
+		// }
+
+		// switch dir {
+		// case Up:
+			err = executor.Insert(&MigrationRecord{
+				Id:        migration.Id,
+				AppliedAt: time.Now(),
+			})
+			if err != nil {
+				if trans, ok := executor.(*gorp.Transaction); ok {
+					trans.Rollback()
+				}
+
+				return applied, newTxError(migration, err)
+			}
+		// case Down:
+		// 	_, err := executor.Delete(&MigrationRecord{
+		// 		Id: migration.Id,
+		// 	})
+		// 	if err != nil {
+		// 		if trans, ok := executor.(*gorp.Transaction); ok {
+		// 			trans.Rollback()
+		// 		}
+    //
+		// 		return applied, newTxError(migration, err)
+		// 	}
+		// default:
+		// 	panic("Not possible")
+		// }
+
+		if trans, ok := executor.(*gorp.Transaction); ok {
+			if err := trans.Commit(); err != nil {
+				return applied, newTxError(migration, err)
+			}
+		}
+
+		applied++
+	}
+
+	return applied, nil
+}
+
 // Filter a slice of migrations into ones that should be applied.
 func ToApply(migrations []*Migration, current string, direction MigrationDirection) []*Migration {
 	var index = -1
