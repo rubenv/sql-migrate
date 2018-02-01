@@ -15,7 +15,7 @@ func (c *SkipCommand) Help() string {
 	helpText := `
 Usage: sql-migrate skip [options] ...
 
-  Set the version level to the most recent version available without actually running the migrations.
+  Set the database level to the most recent version available, without actually running the migrations.
 
 Options:
 
@@ -28,7 +28,7 @@ Options:
 }
 
 func (c *SkipCommand) Synopsis() string {
-	return "Sets the database to the most recent version available without running the migrations"
+	return "Sets the database level to the most recent version available, without running the migrations"
 }
 
 func (c *SkipCommand) Run(args []string) int {
@@ -37,7 +37,7 @@ func (c *SkipCommand) Run(args []string) int {
 
 	cmdFlags := flag.NewFlagSet("up", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
-	cmdFlags.IntVar(&limit, "limit", 0, "Max number of migrations to apply.")
+	cmdFlags.IntVar(&limit, "limit", 0, "Max number of migrations to skip.")
 	ConfigFlags(cmdFlags)
 
 	if err := cmdFlags.Parse(args); err != nil {
