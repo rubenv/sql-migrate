@@ -319,6 +319,44 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	c.Assert(plannedMigrations[2].Migration, Equals, migrations.Migrations[0])
 }
 
+func (s *SqliteMigrateSuite) TestSkipMigration(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			&Migration{
+				Id:   "1_create_table.sql",
+				Up:   []string{"CREATE TABLE people (id int)"},
+				Down: []string{"DROP TABLE people"},
+			},
+			&Migration{
+				Id:   "2_alter_table.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down: []string{"SELECT 0"}, // Not really supported
+			},
+			&Migration{
+				Id:   "10_add_last_name.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
+			},
+		},
+	}
+	n, err := SkipMax(s.Db, "sqlite3", migrations, Up, 0)
+	// there should be no errors
+	c.Assert(err, IsNil)
+	// we should have detected and skipped 3 migrations
+	c.Assert(n, Equals, 3)
+	// should not actually have the tables now since it was skipped
+	// so this query should fail
+	_, err = s.DbMap.Exec("SELECT * FROM people")
+	c.Assert(err, NotNil)
+	// run the migrations again, should execute none of them since we pegged the db level
+	// in the skip command
+	n2, err2 := Exec(s.Db, "sqlite3", migrations, Up)
+	// there should be no errors
+	c.Assert(err2, IsNil)
+	// we should not have executed any migrations
+	c.Assert(n2, Equals, 0)
+}
+
 func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	up := "SELECT 0"
 	down := "SELECT 1"
