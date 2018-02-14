@@ -21,7 +21,7 @@ Using [modl](https://github.com/jmoiron/modl)? Check out [modl-migrate](https://
 To install the library and command line program, use the following:
 
 ```bash
-go -v get github.com/rubenv/sql-migrate/...
+go get -v github.com/rubenv/sql-migrate/...
 ```
 
 ## Usage
