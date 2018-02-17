@@ -256,6 +256,60 @@ func (a AssetMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
+// Avoids pulling in the packr library for everyone, mimicks the bits of
+// packr.Box that we need.
+type PackrBox interface {
+	List() []string
+	Bytes(name string) []byte
+}
+
+// Migrations from a packr box.
+type PackrMigrationSource struct {
+	Box PackrBox
+
+	// Path in the box to use.
+	Dir string
+}
+
+var _ MigrationSource = (*PackrMigrationSource)(nil)
+
+func (p PackrMigrationSource) FindMigrations() ([]*Migration, error) {
+	migrations := make([]*Migration, 0)
+	items := p.Box.List()
+
+	prefix := ""
+	dir := path.Clean(p.Dir)
+	if dir != "." {
+		prefix = fmt.Sprintf("%s/", dir)
+	}
+
+	for _, item := range items {
+		if !strings.HasPrefix(item, prefix) {
+			continue
+		}
+		name := strings.TrimPrefix(item, prefix)
+		if strings.Contains(name, "/") {
+			continue
+		}
+
+		if strings.HasSuffix(name, ".sql") {
+			file := p.Box.Bytes(item)
+
+			migration, err := ParseMigration(name, bytes.NewReader(file))
+			if err != nil {
+				return nil, err
+			}
+
+			migrations = append(migrations, migration)
+		}
+	}
+
+	// Make sure migrations are sorted
+	sort.Sort(byId(migrations))
+
+	return migrations, nil
+}
+
 // Migration parsing
 func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 	m := &Migration{
