@@ -183,7 +183,7 @@ Normally each migration is run within a transaction in order to guarantee that i
 	-- +migrate Down
 	DROP INDEX people_unique_id_idx;
 
- Embedding migrations with packr
+Embedding migrations with packr
 
 If you like your Go applications self-contained (that is: a single binary): use packr (https://github.com/gobuffalo/packr) to embed the migration files.
 
