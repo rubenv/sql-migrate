@@ -482,3 +482,88 @@ func (s *SqliteMigrateSuite) TestLess(c *C) {
 		Less(&Migration{Id: "20160126_1100"}), Equals, false)
 
 }
+
+func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplied(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			&Migration{
+				Id:   "1_create_table.sql",
+				Up:   []string{"CREATE TABLE people (id int)"},
+				Down: []string{"DROP TABLE people"},
+			},
+			&Migration{
+				Id:   "2_alter_table.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down: []string{"SELECT 0"}, // Not really supported
+			},
+			&Migration{
+				Id:   "10_add_last_name.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
+			},
+		},
+	}
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 3)
+
+	// Note that migration 10_add_last_name.sql is missing from the new migrations source
+	// so it is considered an "unknown" migration for the planner.
+	migrations.Migrations = append(migrations.Migrations[:2], &Migration{
+		Id:   "10_add_middle_name.sql",
+		Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
+	})
+
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	c.Assert(err, NotNil, Commentf("Up migrations should not have been applied when there "+
+		"is an unknown migration in the database"))
+	c.Assert(err, FitsTypeOf, &PlanError{})
+
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0)
+	c.Assert(err, NotNil, Commentf("Down migrations should not have been applied when there "+
+		"is an unknown migration in the database"))
+	c.Assert(err, FitsTypeOf, &PlanError{})
+}
+
+// TestExecWithUnknownMigrationInDatabase makes sure that problems found with planning the
+// migrations are propagated and returned by Exec.
+func (s *SqliteMigrateSuite) TestExecWithUnknownMigrationInDatabase(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: sqliteMigrations[:2],
+	}
+
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Then create a new migration source with one of the migrations missing
+	var newSqliteMigrations = []*Migration{
+		&Migration{
+			Id:   "124_other",
+			Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+			Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
+		},
+		&Migration{
+			Id:   "125",
+			Up:   []string{"ALTER TABLE people ADD COLUMN age int"},
+			Down: []string{"ALTER TABLE people DROP COLUMN age"},
+		},
+	}
+	migrations = &MemoryMigrationSource{
+		Migrations: append(sqliteMigrations[:1], newSqliteMigrations...),
+	}
+
+	n, err = Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, NotNil, Commentf("Migrations should not have been applied when there "+
+		"is an unknown migration in the database"))
+	c.Assert(err, FitsTypeOf, &PlanError{})
+	c.Assert(n, Equals, 0)
+
+	// Make sure the new columns are not actually created
+	_, err = s.DbMap.Exec("SELECT middle_name FROM people")
+	c.Assert(err, NotNil)
+	_, err = s.DbMap.Exec("SELECT age FROM people")
+	c.Assert(err, NotNil)
+}
