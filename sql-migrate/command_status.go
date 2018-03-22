@@ -36,6 +36,8 @@ func (c *StatusCommand) Synopsis() string {
 func (c *StatusCommand) Run(args []string) int {
 	cmdFlags := flag.NewFlagSet("status", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
+	var diffByMigration []*migrate.MigrationRecord
+
 	ConfigFlags(cmdFlags)
 
 	if err := cmdFlags.Parse(args); err != nil {
@@ -77,7 +79,7 @@ func (c *StatusCommand) Run(args []string) int {
 
 	for _, m := range migrations {
 		rows[m.Id] = &statusRow{
-			Id:       m.Id,
+			ID:       m.Id,
 			Migrated: false,
 		}
 	}
@@ -86,9 +88,14 @@ func (c *StatusCommand) Run(args []string) int {
 		if _, ok := rows[r.Id]; ok {
 			rows[r.Id].Migrated = true
 			rows[r.Id].AppliedAt = r.AppliedAt
+		} else {
+			row := &migrate.MigrationRecord{Id: r.Id, AppliedAt: r.AppliedAt}
+			diffByMigration = append(diffByMigration, row)
+
 		}
 	}
-
+	// fmt.Println(&diffByMigration)
+	// log.warning("aa")
 	for _, m := range migrations {
 		if rows[m.Id].Migrated {
 			table.Append([]string{
@@ -105,11 +112,19 @@ func (c *StatusCommand) Run(args []string) int {
 
 	table.Render()
 
+	if &diffByMigration != nil {
+		fmt.Println("\n=== Rollback Schema Diff ===")
+		for _, k := range diffByMigration {
+			fmt.Println(k.Id, k.AppliedAt)
+		}
+		fmt.Println("=== Rollback Schema Diff End ===")
+	}
+
 	return 0
 }
 
 type statusRow struct {
-	Id        string
+	ID        string
 	Migrated  bool
 	AppliedAt time.Time
 }
