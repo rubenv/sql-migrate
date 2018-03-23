@@ -94,8 +94,7 @@ func (c *StatusCommand) Run(args []string) int {
 
 		}
 	}
-	// fmt.Println(&diffByMigration)
-	// log.warning("aa")
+
 	for _, m := range migrations {
 		if rows[m.Id].Migrated {
 			table.Append([]string{
@@ -112,7 +111,7 @@ func (c *StatusCommand) Run(args []string) int {
 
 	table.Render()
 
-	if &diffByMigration != nil {
+	if len(diffByMigration) > 0 {
 		fmt.Println("\n=== Rollback Schema Diff ===")
 		for _, k := range diffByMigration {
 			fmt.Println(k.Id, k.AppliedAt)
