@@ -574,7 +574,7 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 				break
 			}
 		}
-		if !found && migration.Less(lastRun) {
+		if !found && lastRun.Less(migration) {
 			missing = append(missing, &PlannedMigration{
 				Migration:          migration,
 				Queries:            migration.Up,
