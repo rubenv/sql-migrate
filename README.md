@@ -9,7 +9,7 @@ Using [modl](https://github.com/jmoiron/modl)? Check out [modl-migrate](https://
 ## Features
 
 * Usable as a CLI tool or as a library
-* Supports SQLite, PostgreSQL, MySQL, MSSQL and Oracle databases (through [gorp](https://github.com/go-gorp/gorp))
+* Supports PostgreSQL, MySQL and Oracle databases (through [gorp](https://github.com/go-gorp/gorp))
 * Can embed migrations into your application
 * Migrations are defined with SQL for full flexibility
 * Atomic migrations

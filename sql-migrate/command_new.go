@@ -9,6 +9,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	. "github.com/17media/sql-migrate/sql-config"
 )
 
 var templateContent = `
@@ -86,9 +88,9 @@ func CreateMigration(name string) error {
 	defer f.Close()
 
 	if err := tpl.Execute(f, nil); err != nil {
-		return err;
+		return err
 	}
 
 	ui.Output(fmt.Sprintf("Created migration %s", pathName))
-	return nil;
+	return nil
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os/exec"
 	"path"
 	"regexp"
 	"sort"
@@ -14,7 +15,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/rubenv/sql-migrate/sqlparse"
+	"github.com/17media/sql-migrate/sql-config"
+	"github.com/17media/sql-migrate/sqlparse"
+	"github.com/go-sql-driver/mysql"
 	"gopkg.in/gorp.v1"
 )
 
@@ -125,7 +128,6 @@ var MigrationDialects = map[string]gorp.Dialect{
 	"sqlite3":  gorp.SqliteDialect{},
 	"postgres": gorp.PostgresDialect{},
 	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
-	"mssql":    gorp.SqlServerDialect{},
 	"oci8":     gorp.OracleDialect{},
 }
 
@@ -283,7 +285,7 @@ type SqlExecutor interface {
 //
 // Returns the number of applied migrations.
 func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ExecMax(db, dialect, m, dir, 0)
+	return ExecMax(db, dialect, m, dir, 0, false)
 }
 
 // Execute a set of migrations
@@ -291,7 +293,13 @@ func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection)
 // Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
 //
 // Returns the number of applied migrations.
-func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, pt bool) (int, error) {
+	env, err := sqlConfig.GetEnvironment()
+	if err != nil {
+		return 0, fmt.Errorf("Could not parse config: %s", err)
+	}
+
+	mysqlConfig, _ := mysql.ParseDSN(env.DataSource)
 	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
 		return 0, err
@@ -312,12 +320,25 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 		}
 
 		for _, stmt := range migration.Queries {
-			if _, err := executor.Exec(stmt); err != nil {
-				if trans, ok := executor.(*gorp.Transaction); ok {
-					trans.Rollback()
-				}
+			if isAlter, query := sqlparse.ParseAlterQuery(stmt); pt == true && isAlter == true {
+				out, _ := exec.Command("pt-online-schema-change",
+					"--execute",
+					"--host", mysqlConfig.Addr,
+					"--user", mysqlConfig.User,
+					"--password", mysqlConfig.Passwd,
+					"--recursion-method", "none",
+					"--alter", query.Action,
+					fmt.Sprintf("t=%s,D=%s", query.Table, mysqlConfig.DBName)).CombinedOutput()
 
-				return applied, newTxError(migration, err)
+				fmt.Println(string(out))
+			} else {
+				if _, err := executor.Exec(stmt); err != nil {
+					if trans, ok := executor.(*gorp.Transaction); ok {
+						trans.Rollback()
+					}
+
+					return applied, newTxError(migration, err)
+				}
 			}
 		}
 

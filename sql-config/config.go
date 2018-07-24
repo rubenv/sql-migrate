@@ -1,4 +1,4 @@
-package main
+package sqlConfig
 
 import (
 	"database/sql"

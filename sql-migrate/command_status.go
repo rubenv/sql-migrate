@@ -7,8 +7,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/17media/sql-migrate"
+	. "github.com/17media/sql-migrate/sql-config"
 	"github.com/olekukonko/tablewriter"
-	"github.com/rubenv/sql-migrate"
 )
 
 type StatusCommand struct {

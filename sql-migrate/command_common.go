@@ -2,11 +2,28 @@ package main
 
 import (
 	"fmt"
+	"os/exec"
 
-	"github.com/rubenv/sql-migrate"
+	"github.com/17media/sql-migrate"
+	. "github.com/17media/sql-migrate/sql-config"
 )
 
-func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) error {
+func isCommandAvailable(name string) bool {
+	cmd := exec.Command("command", "-v", name)
+	if err := cmd.Run(); err != nil {
+		return false
+	}
+	return true
+}
+
+func CheckPTExist() error {
+	if isCommandAvailable("pt-online-schema-change") == false {
+		return fmt.Errorf("pt-online-schema-change doesn't exist")
+	}
+	return nil
+}
+
+func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, pt bool) error {
 	env, err := GetEnvironment()
 	if err != nil {
 		return fmt.Errorf("Could not parse config: %s", err)
@@ -31,7 +48,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 			PrintMigration(m, dir)
 		}
 	} else {
-		n, err := migrate.ExecMax(db, dialect, source, dir, limit)
+		n, err := migrate.ExecMax(db, dialect, source, dir, limit, pt)
 		if err != nil {
 			return fmt.Errorf("Migration failed: %s", err)
 		}

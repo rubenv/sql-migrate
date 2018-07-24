@@ -5,7 +5,7 @@ SQL Schema migration tool for Go.
 Key features:
 
 	* Usable as a CLI tool or as a library
-	* Supports SQLite, PostgreSQL, MySQL, MSSQL and Oracle databases (through gorp)
+	* Supports PostgreSQL, MySQL and Oracle databases (through gorp)
 	* Can embed migrations into your application
 	* Migrations are defined with SQL for full flexibility
 	* Atomic migrations

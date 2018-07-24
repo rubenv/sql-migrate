@@ -4,7 +4,8 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/rubenv/sql-migrate"
+	"github.com/17media/sql-migrate"
+	. "github.com/17media/sql-migrate/sql-config"
 )
 
 type UpCommand struct {
@@ -22,6 +23,7 @@ Options:
   -env="development"     Environment.
   -limit=0               Limit the number of migrations (0 = unlimited).
   -dryrun                Don't apply migrations, just print them.
+  -pt                    Using pt-online-schema-change to migration.
 
 `
 	return strings.TrimSpace(helpText)
@@ -34,18 +36,29 @@ func (c *UpCommand) Synopsis() string {
 func (c *UpCommand) Run(args []string) int {
 	var limit int
 	var dryrun bool
+	var pt bool
 
 	cmdFlags := flag.NewFlagSet("up", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
 	cmdFlags.IntVar(&limit, "limit", 0, "Max number of migrations to apply.")
 	cmdFlags.BoolVar(&dryrun, "dryrun", false, "Don't apply migrations, just print them.")
+	cmdFlags.BoolVar(&pt, "pt", false, "Using pt-online-schema-change to migration.")
 	ConfigFlags(cmdFlags)
 
 	if err := cmdFlags.Parse(args); err != nil {
 		return 1
 	}
 
-	err := ApplyMigrations(migrate.Up, dryrun, limit)
+	// If pt is ture checking pt-online-schema-change whether exists
+	if pt == true {
+		err := CheckPTExist()
+		if err != nil {
+			ui.Error(err.Error())
+			return 1
+		}
+	}
+
+	err := ApplyMigrations(migrate.Up, dryrun, limit, pt)
 	if err != nil {
 		ui.Error(err.Error())
 		return 1
