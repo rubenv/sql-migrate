@@ -8,7 +8,6 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/rubenv/sql-migrate"
 	"gopkg.in/gorp.v1"
 	"gopkg.in/yaml.v2"
 
@@ -76,14 +75,6 @@ func GetEnvironment() (*Environment, error) {
 
 	if env.Dir == "" {
 		env.Dir = "migrations"
-	}
-
-	if env.TableName != "" {
-		migrate.SetTable(env.TableName)
-	}
-
-	if env.SchemaName != "" {
-		migrate.SetSchema(env.SchemaName)
 	}
 
 	return env, nil

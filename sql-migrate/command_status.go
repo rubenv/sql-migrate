@@ -50,6 +50,7 @@ func (c *StatusCommand) Run(args []string) int {
 		ui.Error(fmt.Sprintf("Could not parse config: %s", err))
 		return 1
 	}
+	SetupName(env)
 
 	db, dialect, err := GetConnection(env)
 	if err != nil {

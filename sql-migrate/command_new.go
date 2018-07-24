@@ -77,6 +77,7 @@ func CreateMigration(name string) error {
 	if _, err := os.Stat(env.Dir); os.IsNotExist(err) {
 		return err
 	}
+	SetupName(env)
 
 	fileName := fmt.Sprintf("%s-%s.sql", time.Now().Format("20060102150405"), strings.TrimSpace(name))
 	pathName := path.Join(env.Dir, fileName)

@@ -8,19 +8,22 @@ import (
 	. "github.com/17media/sql-migrate/sql-config"
 )
 
-func isCommandAvailable(name string) bool {
-	cmd := exec.Command("command", "-v", name)
-	if err := cmd.Run(); err != nil {
-		return false
-	}
-	return true
-}
-
 func CheckPTExist() error {
-	if isCommandAvailable("pt-online-schema-change") == false {
-		return fmt.Errorf("pt-online-schema-change doesn't exist")
+	cmd := exec.Command("pt-online-schema-change", "--version")
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s", err.Error())
 	}
 	return nil
+}
+
+func SetupName(env *Environment) {
+	if env.TableName != "" {
+		migrate.SetTable(env.TableName)
+	}
+
+	if env.SchemaName != "" {
+		migrate.SetSchema(env.SchemaName)
+	}
 }
 
 func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, pt bool) error {
@@ -28,6 +31,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, pt 
 	if err != nil {
 		return fmt.Errorf("Could not parse config: %s", err)
 	}
+	SetupName(env)
 
 	db, dialect, err := GetConnection(env)
 	if err != nil {

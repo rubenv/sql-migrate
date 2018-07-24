@@ -321,16 +321,20 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 
 		for _, stmt := range migration.Queries {
 			if isAlter, query := sqlparse.ParseAlterQuery(stmt); pt == true && isAlter == true {
-				out, _ := exec.Command("pt-online-schema-change",
+				out, err := exec.Command("pt-online-schema-change",
 					"--execute",
 					"--host", mysqlConfig.Addr,
 					"--user", mysqlConfig.User,
 					"--password", mysqlConfig.Passwd,
+					"--alter-foreign-keys-method=rebuild_constraints",
 					"--recursion-method", "none",
 					"--alter", query.Action,
 					fmt.Sprintf("t=%s,D=%s", query.Table, mysqlConfig.DBName)).CombinedOutput()
-
 				fmt.Println(string(out))
+
+				if err != nil {
+					return applied, newTxError(migration, err)
+				}
 			} else {
 				if _, err := executor.Exec(stmt); err != nil {
 					if trans, ok := executor.(*gorp.Transaction); ok {
