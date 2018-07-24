@@ -36,7 +36,7 @@ func realMain() int {
 			},
 		},
 		HelpFunc: cli.BasicHelpFunc("sql-migrate"),
-		Version:  "1.0.0",
+		Version:  "1.0.1",
 	}
 
 	exitCode, err := cli.Run()
