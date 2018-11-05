@@ -280,7 +280,7 @@ func (a AssetMigrationSource) FindMigrations() ([]*Migration, error) {
 // packr.Box that we need.
 type PackrBox interface {
 	List() []string
-	Bytes(name string) []byte
+	Find(name string) ([]byte, error)
 }
 
 // Migrations from a packr box.
@@ -313,7 +313,10 @@ func (p PackrMigrationSource) FindMigrations() ([]*Migration, error) {
 		}
 
 		if strings.HasSuffix(name, ".sql") {
-			file := p.Box.Bytes(item)
+			file, err := p.Box.Find(item)
+			if err != nil {
+				return nil, err
+			}
 
 			migration, err := ParseMigration(name, bytes.NewReader(file))
 			if err != nil {
