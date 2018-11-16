@@ -39,7 +39,7 @@ type Environment struct {
 	SchemaName string `yaml:"schema"`
 }
 
-func ReadConfigFromFile() (map[string]*Environment, error) {
+func ReadEnvFromFile() (*Environment, error) {
 	file, err := ioutil.ReadFile(ConfigFile)
 	if err != nil {
 		return nil, err
@@ -51,18 +51,18 @@ func ReadConfigFromFile() (map[string]*Environment, error) {
 		return nil, err
 	}
 
-	return config, nil
-}
-
-func GetEnvironment() (*Environment, error) {
-	config, err := ReadConfigFromFile()
-	if err != nil {
-		return nil, err
-	}
-
 	env := config[ConfigEnvironment]
 	if env == nil {
 		return nil, errors.New("No environment: " + ConfigEnvironment)
+	}
+
+	return env, nil
+}
+
+func GetEnvironment() (*Environment, error) {
+	env, err := ReadEnvFromFile()
+	if err != nil {
+		return nil, err
 	}
 
 	if env.Dialect == "" {
