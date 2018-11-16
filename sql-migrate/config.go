@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/rubenv/sql-migrate"
 	"gopkg.in/gorp.v1"
 	"gopkg.in/yaml.v2"
@@ -32,11 +33,24 @@ func ConfigFlags(f *flag.FlagSet) {
 }
 
 type Environment struct {
-	Dialect    string `yaml:"dialect"`
-	DataSource string `yaml:"datasource"`
-	Dir        string `yaml:"dir"`
-	TableName  string `yaml:"table"`
-	SchemaName string `yaml:"schema"`
+	Dialect    string `yaml:"dialect" envconfig:"DIALECT"`
+	DataSource string `yaml:"datasource" envconfig:"DATASOURCE"`
+	Dir        string `yaml:"dir" envconfig:"DIR"`
+	TableName  string `yaml:"table" envconfig:"TABLE"`
+	SchemaName string `yaml:"schema" envconfig:"SCHEMA"`
+}
+
+func ConfigPresent() bool {
+	_, err := os.Stat(ConfigFile)
+	return !os.IsNotExist(err)
+}
+
+func ReadEnv() (*Environment, error) {
+	env := &Environment{}
+	if err := envconfig.Process("", env); err != nil {
+		return nil, err
+	}
+	return env, nil
 }
 
 func ReadEnvFromFile() (*Environment, error) {
@@ -60,9 +74,19 @@ func ReadEnvFromFile() (*Environment, error) {
 }
 
 func GetEnvironment() (*Environment, error) {
-	env, err := ReadEnvFromFile()
-	if err != nil {
-		return nil, err
+	var env *Environment
+	if ConfigPresent() {
+		var err error
+		env, err = ReadEnvFromFile()
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		var err error
+		env, err = ReadEnv()
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	if env.Dialect == "" {
