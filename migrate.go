@@ -394,7 +394,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 		for _, stmt := range migration.Queries {
 			if _, err := executor.Exec(stmt); err != nil {
 				if trans, ok := executor.(*gorp.Transaction); ok {
-					trans.Rollback()
+					_ = trans.Rollback()
 				}
 
 				return applied, newTxError(migration, err)
@@ -409,7 +409,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 			})
 			if err != nil {
 				if trans, ok := executor.(*gorp.Transaction); ok {
-					trans.Rollback()
+					_ = trans.Rollback()
 				}
 
 				return applied, newTxError(migration, err)
@@ -420,7 +420,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 			})
 			if err != nil {
 				if trans, ok := executor.(*gorp.Transaction); ok {
-					trans.Rollback()
+					_ = trans.Rollback()
 				}
 
 				return applied, newTxError(migration, err)
@@ -551,7 +551,7 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 		})
 		if err != nil {
 			if trans, ok := executor.(*gorp.Transaction); ok {
-				trans.Rollback()
+				_ = trans.Rollback()
 			}
 
 			return applied, newTxError(migration, err)
