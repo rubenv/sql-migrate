@@ -7,7 +7,9 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -173,31 +175,75 @@ func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
-// A set of migrations loaded from an http.FileServer
-
+// HttpFileSystemMigrationSource define A set of migrations loaded from an http.FileServer
 type HttpFileSystemMigrationSource struct {
 	FileSystem http.FileSystem
 }
 
 var _ MigrationSource = (*HttpFileSystemMigrationSource)(nil)
 
+// FindMigrations find migrations for FileMigrationSource
 func (f HttpFileSystemMigrationSource) FindMigrations() ([]*Migration, error) {
-	return findMigrations(f.FileSystem)
+	return findHTTPFileSystemSourceMigrations(f.FileSystem)
 }
 
-// A set of migrations loaded from a directory.
+//FileMigrationSource define A set of migrations loaded from a directory.
 type FileMigrationSource struct {
-	Dir string
+	Dir           string
+	IncludeSubDir bool
+	FoldersToSkip []string
 }
 
 var _ MigrationSource = (*FileMigrationSource)(nil)
 
+// FindMigrations find migrations for FileMigrationSource
 func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
-	filesystem := http.Dir(f.Dir)
-	return findMigrations(filesystem)
+	return findFilesourceMigrations(f.Dir, f.IncludeSubDir, f.FoldersToSkip)
 }
 
-func findMigrations(dir http.FileSystem) ([]*Migration, error) {
+func findFilesourceMigrations(dir string, includeSubDir bool, foldersToSkip []string) ([]*Migration, error) {
+	migrations := make([]*Migration, 0)
+	var filePaths []string
+	filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
+		if strings.HasSuffix(info.Name(), ".sql") {
+			filePaths = append(filePaths, path)
+			return nil
+
+		} else if info.IsDir() {
+			if path != dir && !includeSubDir {
+				return filepath.SkipDir
+			}
+
+			for _, folderToSkip := range foldersToSkip {
+				if info.Name() == folderToSkip {
+					return filepath.SkipDir
+				}
+			}
+		}
+		return nil
+	})
+
+	for _, filePath := range filePaths {
+		file, err := os.Open(filePath)
+		if err != nil {
+			return nil, fmt.Errorf("Error while opening %s: %s", filePath, err)
+		}
+
+		migration, err := ParseMigration(file.Name(), file)
+		if err != nil {
+			return nil, fmt.Errorf("Error while parsing %s: %s", file.Name(), err)
+		}
+
+		migrations = append(migrations, migration)
+	}
+
+	// Make sure migrations are sorted
+	sort.Sort(byId(migrations))
+
+	return migrations, nil
+}
+
+func findHTTPFileSystemSourceMigrations(dir http.FileSystem) ([]*Migration, error) {
 	migrations := make([]*Migration, 0)
 
 	file, err := dir.Open("/")

@@ -126,6 +126,43 @@ func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
 	c.Assert(id, Equals, int64(1))
 }
 
+func (s *SqliteMigrateSuite) TestFileMigrateWithSubfolder(c *C) {
+	migrations := &FileMigrationSource{
+		Dir:           "test-migrations",
+		IncludeSubDir: true,
+	}
+
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 4)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+}
+
+func (s *SqliteMigrateSuite) TestFileMigrateWithSubfolderAndSkip(c *C) {
+
+	migrations := &FileMigrationSource{
+		Dir:           "test-migrations",
+		IncludeSubDir: true,
+		FoldersToSkip: []string{"subfolder_to_skip"},
+	}
+
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 3)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+
+}
+
 func (s *SqliteMigrateSuite) TestHttpFileSystemMigrate(c *C) {
 	migrations := &HttpFileSystemMigrationSource{
 		FileSystem: http.Dir("test-migrations"),
