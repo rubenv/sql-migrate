@@ -284,6 +284,18 @@ type MigrationSource interface {
 
 The resulting slice of migrations will be executed in the given order, so it should usually be sorted by the `Id` field.
 
+## Usage with [sqlx](http://jmoiron.github.io/sqlx/)
+
+This library is compatible with sqlx. When calling migrate just dereference the DB from your `*sqlx.DB`:
+
+```
+n, err := migrate.Exec(db.DB, "sqlite3", migrations, migrate.Up)
+                    //   ^^^ <-- Here db is a *sqlx.DB, the db.DB field is the plain sql.DB
+if err != nil {
+    // Handle errors!
+}
+```
+
 ## License
 
 This library is distributed under the [MIT](LICENSE) license.
