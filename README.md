@@ -15,6 +15,7 @@ Using [modl](https://github.com/jmoiron/modl)? Check out [modl-migrate](https://
 * Atomic migrations
 * Up/down migrations to allow rollback
 * Supports multiple database types in one project
+* Works great with other libraries such as [sqlx](http://jmoiron.github.io/sqlx/)
 
 ## Installation
 
