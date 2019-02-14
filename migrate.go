@@ -18,7 +18,6 @@ import (
 	"github.com/17media/sql-migrate/sql-config"
 	"github.com/17media/sql-migrate/sqlparse"
 	"github.com/go-sql-driver/mysql"
-	"gopkg.in/gorp.v1"
 )
 
 type MigrationDirection int
@@ -329,6 +328,8 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 					"--alter-foreign-keys-method=rebuild_constraints",
 					"--recursion-method", "none",
 					"--alter", query.Action,
+					"--max-load", "Threads_running=100",
+					"--critical-load", "Threads_running=110",
 					fmt.Sprintf("t=%s,D=%s", query.Table, mysqlConfig.DBName)).CombinedOutput()
 				fmt.Println(string(out))
 
