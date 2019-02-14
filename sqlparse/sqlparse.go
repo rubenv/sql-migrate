@@ -103,7 +103,7 @@ func parseCommand(line string) (*migrateCommand, error) {
 	return cmd, nil
 }
 
-// Split the given sql script into individual statements.
+// ParseMigration splits the given sql script into individual statements.
 //
 // The base case is to simply split on semicolons, as these
 // naturally terminate a statement.

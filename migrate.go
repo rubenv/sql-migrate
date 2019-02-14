@@ -68,7 +68,7 @@ func (e *TxError) Error() string {
 	return e.Err.Error() + " handling " + e.Migration.Id
 }
 
-// Set the name of the table used to store migration info.
+// SetTable: Set the name of the table used to store migration info.
 //
 // Should be called before any other call such as (Exec, ExecMax, ...).
 func SetTable(name string) {
@@ -333,7 +333,7 @@ func (p PackrMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
-// Migration parsing
+// ParseMigration: Migration parsing
 func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 	m := &Migration{
 		Id: id,
@@ -359,14 +359,14 @@ type SqlExecutor interface {
 	Delete(list ...interface{}) (int64, error)
 }
 
-// Execute a set of migrations
+// Exec executes a set of migrations
 //
 // Returns the number of applied migrations.
 func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
 	return ExecMax(db, dialect, m, dir, 0)
 }
 
-// Execute a set of migrations
+// ExecMax executes a set of migrations
 //
 // Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
 //
@@ -441,7 +441,7 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	return applied, nil
 }
 
-// Plan a migration.
+// PlanMigration: Plan a migration.
 func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap, err := getMigrationDbMap(db, dialect)
 	if err != nil {
@@ -520,7 +520,7 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	return result, dbMap, nil
 }
 
-// Skip a set of migrations
+// SkipMax: Skip a set of migrations
 //
 // Will skip at most `max` migrations. Pass 0 for no limit.
 //
@@ -569,7 +569,7 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	return applied, nil
 }
 
-// Filter a slice of migrations into ones that should be applied.
+// ToApply: Filter a slice of migrations into ones that should be applied.
 func ToApply(migrations []*Migration, current string, direction MigrationDirection) []*Migration {
 	var index = -1
 	if current != "" {
