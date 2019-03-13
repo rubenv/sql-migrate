@@ -332,7 +332,6 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 					"--alter", query.Action,
 					"--max-load", "Threads_running=80",
 					"--critical-load", "Threads_running=100",
-					"--tries",
 					fmt.Sprintf("t=%s,D=%s", query.Table, mysqlConfig.DBName)).CombinedOutput()
 				fmt.Println(string(out))
 
