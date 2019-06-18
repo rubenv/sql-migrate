@@ -73,11 +73,12 @@ func SkipMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) erro
 		return fmt.Errorf("Migration failed: %s", err)
 	}
 
-	ui.Output("Skipped 1 migration")
-
-	if n == 1 {
+	switch n {
+	case 0:
+		ui.Output("All migrations have already been applied")
+	case 1:
 		ui.Output("Skipped 1 migration")
-	} else {
+	default:
 		ui.Output(fmt.Sprintf("Skipped %d migrations", n))
 	}
 
