@@ -56,6 +56,17 @@ production:
     table: migrations
 ```
 
+Also one can obtain env variables in datasource field via `os.ExpandEnv` embedded call for the field.
+This may be useful if one doesn't want to store credentials in file:
+
+```yml
+production:
+    dialect: postgres
+    datasource: host=prodhost dbname=proddb user=${DB_USER} password=${DB_PASSWORD} sslmode=required
+    dir: migrations
+    table: migrations
+```
+
 The `table` setting is optional and will default to `gorp_migrations`.
 
 The environment that will be used can be specified with the `-env` flag (defaults to `development`).
