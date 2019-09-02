@@ -3,8 +3,11 @@
 # Tweak PATH for Travis
 export PATH=$PATH:$HOME/gopath/bin
 
-export MYSQL_USER=root
-export DATABASE=test_env
+export MYSQL_USER=test
+export DATABASE_NAME=test
+export MYSQL_PASSWORD=
+export MYSQL_HOST=localhost
+export MYSQL_PORT=3306
 
 OPTIONS="-config=test-integration/dbconfig.yml -env mysql_env"
 

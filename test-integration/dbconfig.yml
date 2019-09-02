@@ -15,7 +15,7 @@ mysql_noflag:
 
 mysql_env:
     dialect: mysql
-    datasource: ${MYSQL_USER}@/$DATABASE?parseTime=true
+    datasource: ${MYSQL_USER}:${MYSQL_PASSWORD}@tcp(${MYSQL_HOST}:${MYSQL_PORT})/${DATABASE_NAME}?parseTime=true
     dir: test-migrations
 
 sqlite:
