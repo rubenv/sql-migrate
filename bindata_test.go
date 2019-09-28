@@ -131,8 +131,8 @@ type _bintree_t struct {
 }
 
 var _bintree = &_bintree_t{nil, map[string]*_bintree_t{
-	"test-migrations": &_bintree_t{nil, map[string]*_bintree_t{
-		"1_initial.sql": &_bintree_t{test_migrations_1_initial_sql, map[string]*_bintree_t{}},
-		"2_record.sql":  &_bintree_t{test_migrations_2_record_sql, map[string]*_bintree_t{}},
+	"test-migrations": {nil, map[string]*_bintree_t{
+		"1_initial.sql": {test_migrations_1_initial_sql, map[string]*_bintree_t{}},
+		"2_record.sql":  {test_migrations_2_record_sql, map[string]*_bintree_t{}},
 	}},
 }}
