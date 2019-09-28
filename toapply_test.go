@@ -1,8 +1,9 @@
 package migrate
 
 import (
-	. "gopkg.in/check.v1"
 	"sort"
+
+	. "gopkg.in/check.v1"
 )
 
 var toapplyMigrations = []*Migration{

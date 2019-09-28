@@ -1,5 +1,10 @@
 .*.swp
 *.test
+*.out
+coverage.*
+debug.*
+debug
+go.sum
 
 /sql-migrate/test.db
 /test.db
