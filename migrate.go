@@ -92,6 +92,9 @@ func SetSchema(name string) {
 	}
 }
 
+/*
+Migration is a method receiver.
+*/
 type Migration struct {
 	Id   string
 	Up   []string
@@ -134,6 +137,7 @@ func (m Migration) VersionInt() int64 {
 	return value
 }
 
+// PlannedMigration represents a migration.
 type PlannedMigration struct {
 	*Migration
 
@@ -147,11 +151,13 @@ func (b byId) Len() int           { return len(b) }
 func (b byId) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b byId) Less(i, j int) bool { return b[i].Less(b[j]) }
 
+// MigrationRecord is the model of the migration table.
 type MigrationRecord struct {
 	Id        string    `db:"id"`
 	AppliedAt time.Time `db:"applied_at"`
 }
 
+// MigrationDialects holds the available sql dialects.
 var MigrationDialects = map[string]gorp.Dialect{
 	"sqlite3":  gorp.SqliteDialect{},
 	"postgres": gorp.PostgresDialect{},
@@ -167,7 +173,7 @@ type MigrationSource interface {
 	FindMigrations() ([]*Migration, error)
 }
 
-// A hardcoded set of migrations, in-memory.
+// MemoryMigrationSource is a methodreceiver for a hardcoded set of migrations, in-memory.
 type MemoryMigrationSource struct {
 	Migrations []*Migration
 }
@@ -175,7 +181,7 @@ type MemoryMigrationSource struct {
 var _ MigrationSource = (*MemoryMigrationSource)(nil)
 
 /*
-FindMigrations finds migrations inside memory.
+FindMigrations finds migrations that are hard-coded in-memory.
 */
 func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	// Make sure migrations are sorted. In order to make the MemoryMigrationSource safe for
@@ -187,8 +193,7 @@ func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
-// A set of migrations loaded from an http.FileServer
-
+// HttpFileSystemMigrationSource is the methodreceiver for a set of migrations loaded from a http.FileServer
 type HttpFileSystemMigrationSource struct {
 	FileSystem http.FileSystem
 }
@@ -196,13 +201,13 @@ type HttpFileSystemMigrationSource struct {
 var _ MigrationSource = (*HttpFileSystemMigrationSource)(nil)
 
 /*
-FindMigrations finds migrations from an URL.
+FindMigrations finds migrations from a http.FileServer.
 */
 func (f HttpFileSystemMigrationSource) FindMigrations() ([]*Migration, error) {
 	return findMigrations(f.FileSystem)
 }
 
-// A set of migrations loaded from a directory.
+// FileMigrationSource is the methodreceiver for a set of migrations loaded from a directory.
 type FileMigrationSource struct {
 	Dir string
 }
@@ -252,7 +257,7 @@ func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 	return migrations, nil
 }
 
-// Migrations from a bindata asset set.
+// AssetMigrationSource is the method receiver for the Migrations from a bindata asset set.
 type AssetMigrationSource struct {
 	// Asset should return content of file in path if exists
 	Asset func(path string) ([]byte, error)
@@ -306,7 +311,7 @@ type PackrBox interface {
 	Find(name string) ([]byte, error)
 }
 
-// Migrations from a packr box.
+// PackrMigrationSource is the method receiver for the Migrations from a packr box.
 type PackrMigrationSource struct {
 	Box PackrBox
 
