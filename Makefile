@@ -69,6 +69,14 @@ test-v:
 	@GOPATH=$(GOPATH) GOBIN=$(GOBIN) go test -v -count=1 $(TESTTIMEOUT) ./...
 	@echo "\033[01;32m > ready...\033[00m"
 
+
+## format: runs gofmt
+format:
+	@tput reset
+	@echo "\033[01;34m > format...\033[00m"
+	@GOPATH=$(GOPATH) GOBIN=$(GOBIN) gofmt -s -w .
+	@echo "\033[01;32m > ready...\033[00m"
+
 makefile: help
 help: Makefile
 
