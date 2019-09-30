@@ -3,9 +3,12 @@ package main
 import (
 	"fmt"
 
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
+/*
+ApplyMigrations applies the migration.
+*/
 func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) error {
 	env, err := GetEnvironment()
 	if err != nil {
@@ -46,6 +49,9 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 	return nil
 }
 
+/*
+PrintMigration prints the planned migration.
+*/
 func PrintMigration(m *migrate.PlannedMigration, dir migrate.MigrationDirection) {
 	if dir == migrate.Up {
 		ui.Output(fmt.Sprintf("==> Would apply migration %s (up)", m.Id))
