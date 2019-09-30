@@ -41,8 +41,8 @@ func errNoTerminator() error {
 			See https://github.com/rubenv/sql-migrate for details.`)
 	}
 
-	return errors.New(fmt.Sprintf(`ERROR: The last statement must be ended by a semicolon, a line whose contents are %q, or '-- +migrate StatementEnd' marker.
-			See https://github.com/rubenv/sql-migrate for details.`, LineSeparator))
+	return fmt.Errorf(`ERROR: The last statement must be ended by a semicolon, a line whose contents are %q, or '-- +migrate StatementEnd' marker.
+			See https://github.com/rubenv/sql-migrate for details.`, LineSeparator)
 }
 
 /*
