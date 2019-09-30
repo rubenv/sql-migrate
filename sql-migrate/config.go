@@ -23,7 +23,10 @@ var dialects = map[string]gorp.Dialect{
 	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
 }
 
+// ConfigFile is the name of the configuration file.
 var ConfigFile string
+
+// ConfigEnvironment is the environment in use.
 var ConfigEnvironment string
 
 /*
@@ -34,6 +37,7 @@ func ConfigFlags(f *flag.FlagSet) {
 	f.StringVar(&ConfigEnvironment, "env", "development", "Environment to use.")
 }
 
+// Environment represents the environment file.
 type Environment struct {
 	Dialect    string `yaml:"dialect"`
 	DataSource string `yaml:"datasource"`
