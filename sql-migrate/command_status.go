@@ -8,12 +8,16 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
+// StatusCommand is the method receiver
 type StatusCommand struct {
 }
 
+/*
+Help shows the help text.
+*/
 func (c *StatusCommand) Help() string {
 	helpText := `
 Usage: sql-migrate status [options] ...
@@ -29,10 +33,16 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
+/*
+Synopsis returns the short description.
+*/
 func (c *StatusCommand) Synopsis() string {
 	return "Show migration status"
 }
 
+/*
+Run executes via commandline parameters.
+*/
 func (c *StatusCommand) Run(args []string) int {
 	cmdFlags := flag.NewFlagSet("status", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
