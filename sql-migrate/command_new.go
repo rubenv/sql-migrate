@@ -48,7 +48,7 @@ Options:
 }
 
 /*
-Synopsis returns thea short description.
+Synopsis returns the short description.
 */
 func (c *NewCommand) Synopsis() string {
 	return "Create a new migration"

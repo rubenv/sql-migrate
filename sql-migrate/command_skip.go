@@ -5,12 +5,16 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
+// SkipCommand is the method receiver
 type SkipCommand struct {
 }
 
+/*
+Help shows the help text.
+*/
 func (c *SkipCommand) Help() string {
 	helpText := `
 Usage: sql-migrate skip [options] ...
@@ -27,10 +31,16 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
+/*
+Synopsis returns the short description.
+*/
 func (c *SkipCommand) Synopsis() string {
 	return "Sets the database level to the most recent version available, without running the migrations"
 }
 
+/*
+Run executes via commandline parameters.
+*/
 func (c *SkipCommand) Run(args []string) int {
 	var limit int
 	var dryrun bool
@@ -53,6 +63,9 @@ func (c *SkipCommand) Run(args []string) int {
 	return 0
 }
 
+/*
+SkipMigrations tries to skip migrations.
+*/
 func SkipMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) error {
 	env, err := GetEnvironment()
 	if err != nil {
