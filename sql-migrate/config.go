@@ -8,7 +8,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 	"gopkg.in/gorp.v1"
 	"gopkg.in/yaml.v2"
 
@@ -26,6 +26,9 @@ var dialects = map[string]gorp.Dialect{
 var ConfigFile string
 var ConfigEnvironment string
 
+/*
+ConfigFlags configures the commandline flags.
+*/
 func ConfigFlags(f *flag.FlagSet) {
 	f.StringVar(&ConfigFile, "config", "dbconfig.yml", "Configuration file to use.")
 	f.StringVar(&ConfigEnvironment, "env", "development", "Environment to use.")
@@ -39,6 +42,9 @@ type Environment struct {
 	SchemaName string `yaml:"schema"`
 }
 
+/*
+ReadConfig reads the configuration
+*/
 func ReadConfig() (map[string]*Environment, error) {
 	file, err := ioutil.ReadFile(ConfigFile)
 	if err != nil {
@@ -54,6 +60,9 @@ func ReadConfig() (map[string]*Environment, error) {
 	return config, nil
 }
 
+/*
+GetEnvironment gets the environment via the configuration.
+*/
 func GetEnvironment() (*Environment, error) {
 	config, err := ReadConfig()
 	if err != nil {
@@ -89,6 +98,9 @@ func GetEnvironment() (*Environment, error) {
 	return env, nil
 }
 
+/*
+GetConnection gets the database connection.
+*/
 func GetConnection(env *Environment) (*sql.DB, string, error) {
 	db, err := sql.Open(env.Dialect, env.DataSource)
 	if err != nil {
