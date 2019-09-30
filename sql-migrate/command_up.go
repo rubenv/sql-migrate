@@ -4,12 +4,16 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
+// UpCommand is the method receiver
 type UpCommand struct {
 }
 
+/*
+Help shows the help text.
+*/
 func (c *UpCommand) Help() string {
 	helpText := `
 Usage: sql-migrate up [options] ...
@@ -27,10 +31,16 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
+/*
+Synopsis returns the short description.
+*/
 func (c *UpCommand) Synopsis() string {
 	return "Migrates the database to the most recent version available"
 }
 
+/*
+Run executes via commandline parameters.
+*/
 func (c *UpCommand) Run(args []string) int {
 	var limit int
 	var dryrun bool
