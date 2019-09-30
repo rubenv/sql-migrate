@@ -18,13 +18,20 @@ var templateContent = `
 `
 var tpl *template.Template
 
+/*
+init initializes the tpl
+*/
 func init() {
 	tpl = template.Must(template.New("new_migration").Parse(templateContent))
 }
 
+// NewCommand is the method receiver
 type NewCommand struct {
 }
 
+/*
+Help shows the help text.
+*/
 func (c *NewCommand) Help() string {
 	helpText := `
 Usage: sql-migrate new [options] name
@@ -40,10 +47,16 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
+/*
+Synopsis returns thea short description.
+*/
 func (c *NewCommand) Synopsis() string {
 	return "Create a new migration"
 }
 
+/*
+Run executes via commandline parameters.
+*/
 func (c *NewCommand) Run(args []string) int {
 	cmdFlags := flag.NewFlagSet("new", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
@@ -66,6 +79,9 @@ func (c *NewCommand) Run(args []string) int {
 	return 0
 }
 
+/*
+CreateMigration creates a migration based on a given name.
+*/
 func CreateMigration(name string) error {
 	env, err := GetEnvironment()
 	if err != nil {
