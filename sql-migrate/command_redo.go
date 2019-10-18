@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 type RedoCommand struct {
@@ -60,7 +60,10 @@ func (c *RedoCommand) Run(args []string) int {
 	}
 
 	migrations, _, err := migrate.PlanMigration(db, dialect, source, migrate.Down, 1)
-	if len(migrations) == 0 {
+	if err != nil {
+		ui.Error(fmt.Sprintf("Migration (redo) failed: %v", err))
+		return 1
+	} else if len(migrations) == 0 {
 		ui.Output("Nothing to do!")
 		return 0
 	}
