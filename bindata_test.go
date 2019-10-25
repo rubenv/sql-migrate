@@ -68,8 +68,8 @@ func test_migrations_2_record_sql() ([]byte, error) {
 // It returns an error if the asset could not be found or
 // could not be loaded.
 func Asset(name string) ([]byte, error) {
-	cannonicalName := strings.Replace(name, "\\", "/", -1)
-	if f, ok := _bindata[cannonicalName]; ok {
+	canonicalName := strings.Replace(name, "\\", "/", -1)
+	if f, ok := _bindata[canonicalName]; ok {
 		return f()
 	}
 	return nil, fmt.Errorf("Asset %s not found", name)
@@ -105,8 +105,8 @@ var _bindata = map[string]func() ([]byte, error){
 func AssetDir(name string) ([]string, error) {
 	node := _bintree
 	if len(name) != 0 {
-		cannonicalName := strings.Replace(name, "\\", "/", -1)
-		pathList := strings.Split(cannonicalName, "/")
+		canonicalName := strings.Replace(name, "\\", "/", -1)
+		pathList := strings.Split(canonicalName, "/")
 		for _, p := range pathList {
 			node = node.Children[p]
 			if node == nil {

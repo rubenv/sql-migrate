@@ -82,7 +82,7 @@ func (s *SqlParseSuite) TestSplitStatements(c *C) {
 }
 
 func (s *SqlParseSuite) TestIntentionallyBadStatements(c *C) {
-	for _, test := range intenionallyBad {
+	for _, test := range intentionallyBad {
 		_, err := ParseMigration(strings.NewReader(test))
 		c.Assert(err, NotNil)
 	}
@@ -187,7 +187,7 @@ DROP TABLE fancier_post;
 `
 
 // raise error when statements are not explicitly ended
-var intenionallyBad = []string{
+var intentionallyBad = []string{
 	// first statement missing terminator
 	`-- +migrate Up
 CREATE TABLE post (
