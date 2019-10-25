@@ -33,20 +33,20 @@ var numberPrefixRegex = regexp.MustCompile(`^(\d+).*$`)
 // of already applied migrations and the currently found. For example, when the database
 // contains a migration which is not among the migrations list found for an operation.
 type PlanError struct {
-	Migration   *Migration
-	ErrorMessag string
+	Migration    *Migration
+	ErrorMessage string
 }
 
 func newPlanError(migration *Migration, errorMessage string) error {
 	return &PlanError{
-		Migration:   migration,
-		ErrorMessag: errorMessage,
+		Migration:    migration,
+		ErrorMessage: errorMessage,
 	}
 }
 
 func (p *PlanError) Error() string {
 	return fmt.Sprintf("Unable to create migration plan because of %s: %s",
-		p.Migration.Id, p.ErrorMessag)
+		p.Migration.Id, p.ErrorMessage)
 }
 
 // TxError is returned when any error is encountered during a database
