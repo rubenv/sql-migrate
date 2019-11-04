@@ -20,7 +20,7 @@ func ParseAlterQuery(str string) (bool, alterQuery) {
 	str = strings.Replace(str, "\n", " ", -1)
 	str = strings.Replace(str, ";", ";\n", -1)
 
-	re = regexp.MustCompile(`(?m)^(?:.*)ALTER\sTABLE\s(\S*)\s(.*);$`)
+	re = regexp.MustCompile(`(?m)^(?:.*)ALTER\s+TABLE\s+(\S*)\s+(.*);$`)
 
 	match := re.FindStringSubmatch(str)
 	if match != nil {
