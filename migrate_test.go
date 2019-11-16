@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 
-	"github.com/gobuffalo/packr"
+	"github.com/gobuffalo/packr/v2"
 	_ "github.com/mattn/go-sqlite3"
 	. "gopkg.in/check.v1"
 	"gopkg.in/gorp.v1"
@@ -162,7 +162,7 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 
 func (s *SqliteMigrateSuite) TestPackrMigrate(c *C) {
 	migrations := &PackrMigrationSource{
-		Box: packr.NewBox("test-migrations"),
+		Box: packr.New("migrations", "test-migrations"),
 	}
 
 	// Executes two migrations

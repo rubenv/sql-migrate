@@ -159,7 +159,7 @@ migrations := &migrate.FileMigrationSource{
 
 // OR: Use migrations from a packr box
 migrations := &migrate.PackrMigrationSource{
-    Box: packr.NewBox("./migrations"),
+    Box: packr.New("migrations", "./migrations"),
 }
 
 // OR: Use migrations from bindata:
@@ -250,11 +250,17 @@ If you like your Go applications self-contained (that is: a single binary): use 
 
 Just write your migration files as usual, as a set of SQL files in a folder.
 
+Import the packr package into your application:
+
+```go
+import "github.com/gobuffalo/packr/v2"
+```
+
 Use the `PackrMigrationSource` in your application to find the migrations:
 
 ```go
 migrations := &migrate.PackrMigrationSource{
-    Box: packr.NewBox("./migrations"),
+    Box: packr.New("migrations", "./migrations"),
 }
 ```
 
