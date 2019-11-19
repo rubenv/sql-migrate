@@ -557,3 +557,24 @@ func (s *SqliteMigrateSuite) TestExecWithUnknownMigrationInDatabase(c *C) {
 	_, err = s.DbMap.Exec("SELECT age FROM people")
 	c.Assert(err, NotNil)
 }
+
+func (s *SqliteMigrateSuite) TestRunMigrationObj(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: sqliteMigrations[:1],
+	}
+
+	ms := NewMigrationSet("", "")
+	// Executes one migration
+	n, err := ms.Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+
+	// Can use table now
+	_, err = s.DbMap.Exec("SELECT * FROM people")
+	c.Assert(err, IsNil)
+
+	// Shouldn't apply migration again
+	n, err = ms.Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 0)
+}
