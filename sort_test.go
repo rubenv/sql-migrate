@@ -1,8 +1,9 @@
 package migrate
 
 import (
-	. "gopkg.in/check.v1"
 	"sort"
+
+	. "gopkg.in/check.v1"
 )
 
 type SortSuite struct{}
@@ -11,14 +12,14 @@ var _ = Suite(&SortSuite{})
 
 func (s *SortSuite) TestSortMigrations(c *C) {
 	var migrations = byId([]*Migration{
-		&Migration{Id: "10_abc", Up: nil, Down: nil},
-		&Migration{Id: "120_cde", Up: nil, Down: nil},
-		&Migration{Id: "1_abc", Up: nil, Down: nil},
-		&Migration{Id: "efg", Up: nil, Down: nil},
-		&Migration{Id: "2_cde", Up: nil, Down: nil},
-		&Migration{Id: "35_cde", Up: nil, Down: nil},
-		&Migration{Id: "3_efg", Up: nil, Down: nil},
-		&Migration{Id: "4_abc", Up: nil, Down: nil},
+		{Id: "10_abc", Up: nil, Down: nil},
+		{Id: "120_cde", Up: nil, Down: nil},
+		{Id: "1_abc", Up: nil, Down: nil},
+		{Id: "efg", Up: nil, Down: nil},
+		{Id: "2_cde", Up: nil, Down: nil},
+		{Id: "35_cde", Up: nil, Down: nil},
+		{Id: "3_efg", Up: nil, Down: nil},
+		{Id: "4_abc", Up: nil, Down: nil},
 	})
 
 	sort.Sort(migrations)

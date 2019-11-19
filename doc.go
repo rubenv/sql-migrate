@@ -1,6 +1,5 @@
 /*
-
-SQL Schema migration tool for Go.
+Package migrate is a SQL Schema migration tool for Go.
 
 Key features:
 

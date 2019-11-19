@@ -44,6 +44,9 @@ func newPlanError(migration *Migration, errorMessage string) error {
 	}
 }
 
+/*
+Error returns an enhanced plan error as string.
+*/
 func (p *PlanError) Error() string {
 	return fmt.Sprintf("Unable to create migration plan because of %s: %s",
 		p.Migration.Id, p.ErrorMessage)
@@ -64,13 +67,18 @@ func newTxError(migration *PlannedMigration, err error) error {
 	}
 }
 
+/*
+Error returns an enhanced error as string.
+*/
 func (e *TxError) Error() string {
 	return e.Err.Error() + " handling " + e.Migration.Id
 }
 
-// Set the name of the table used to store migration info.
-//
-// Should be called before any other call such as (Exec, ExecMax, ...).
+/*
+SetTable sets the name of the table used to store migration info.
+
+Should be called before any other call such as (Exec, ExecMax, ...).
+*/
 func SetTable(name string) {
 	if name != "" {
 		tableName = name
@@ -84,6 +92,9 @@ func SetSchema(name string) {
 	}
 }
 
+/*
+Migration is a method receiver.
+*/
 type Migration struct {
 	Id   string
 	Up   []string
@@ -114,6 +125,9 @@ func (m Migration) NumberPrefixMatches() []string {
 	return numberPrefixRegex.FindStringSubmatch(m.Id)
 }
 
+/*
+VersionInt returns the version.
+*/
 func (m Migration) VersionInt() int64 {
 	v := m.NumberPrefixMatches()[1]
 	value, err := strconv.ParseInt(v, 10, 64)
@@ -123,6 +137,7 @@ func (m Migration) VersionInt() int64 {
 	return value
 }
 
+// PlannedMigration represents a migration.
 type PlannedMigration struct {
 	*Migration
 
@@ -136,11 +151,13 @@ func (b byId) Len() int           { return len(b) }
 func (b byId) Swap(i, j int)      { b[i], b[j] = b[j], b[i] }
 func (b byId) Less(i, j int) bool { return b[i].Less(b[j]) }
 
+// MigrationRecord is the model of the migration table.
 type MigrationRecord struct {
 	Id        string    `db:"id"`
 	AppliedAt time.Time `db:"applied_at"`
 }
 
+// MigrationDialects holds the available sql dialects.
 var MigrationDialects = map[string]gorp.Dialect{
 	"sqlite3":  gorp.SqliteDialect{},
 	"postgres": gorp.PostgresDialect{},
@@ -156,13 +173,16 @@ type MigrationSource interface {
 	FindMigrations() ([]*Migration, error)
 }
 
-// A hardcoded set of migrations, in-memory.
+// MemoryMigrationSource is a methodreceiver for a hardcoded set of migrations, in-memory.
 type MemoryMigrationSource struct {
 	Migrations []*Migration
 }
 
 var _ MigrationSource = (*MemoryMigrationSource)(nil)
 
+/*
+FindMigrations finds migrations that are hard-coded in-memory.
+*/
 func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	// Make sure migrations are sorted. In order to make the MemoryMigrationSource safe for
 	// concurrent use we should not mutate it in place. So `FindMigrations` would sort a copy
@@ -173,25 +193,30 @@ func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
-// A set of migrations loaded from an http.FileServer
-
+// HttpFileSystemMigrationSource is the methodreceiver for a set of migrations loaded from a http.FileServer
 type HttpFileSystemMigrationSource struct {
 	FileSystem http.FileSystem
 }
 
 var _ MigrationSource = (*HttpFileSystemMigrationSource)(nil)
 
+/*
+FindMigrations finds migrations from a http.FileServer.
+*/
 func (f HttpFileSystemMigrationSource) FindMigrations() ([]*Migration, error) {
 	return findMigrations(f.FileSystem)
 }
 
-// A set of migrations loaded from a directory.
+// FileMigrationSource is the methodreceiver for a set of migrations loaded from a directory.
 type FileMigrationSource struct {
 	Dir string
 }
 
 var _ MigrationSource = (*FileMigrationSource)(nil)
 
+/*
+FindMigrations finds migrations inside the migration sdirectory.
+*/
 func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
 	filesystem := http.Dir(f.Dir)
 	return findMigrations(filesystem)
@@ -232,7 +257,7 @@ func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 	return migrations, nil
 }
 
-// Migrations from a bindata asset set.
+// AssetMigrationSource is the method receiver for the Migrations from a bindata asset set.
 type AssetMigrationSource struct {
 	// Asset should return content of file in path if exists
 	Asset func(path string) ([]byte, error)
@@ -246,6 +271,9 @@ type AssetMigrationSource struct {
 
 var _ MigrationSource = (*AssetMigrationSource)(nil)
 
+/*
+FindMigrations finds migrations inside the assets location.
+*/
 func (a AssetMigrationSource) FindMigrations() ([]*Migration, error) {
 	migrations := make([]*Migration, 0)
 
@@ -283,7 +311,7 @@ type PackrBox interface {
 	Find(name string) ([]byte, error)
 }
 
-// Migrations from a packr box.
+// PackrMigrationSource is the method receiver for the Migrations from a packr box.
 type PackrMigrationSource struct {
 	Box PackrBox
 
@@ -293,6 +321,9 @@ type PackrMigrationSource struct {
 
 var _ MigrationSource = (*PackrMigrationSource)(nil)
 
+/*
+FindMigrations finds embedded migrations.
+*/
 func (p PackrMigrationSource) FindMigrations() ([]*Migration, error) {
 	migrations := make([]*Migration, 0)
 	items := p.Box.List()
@@ -333,7 +364,9 @@ func (p PackrMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
-// Migration parsing
+/*
+ParseMigration parses a migration.
+*/
 func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 	m := &Migration{
 		Id: id,
@@ -359,18 +392,22 @@ type SqlExecutor interface {
 	Delete(list ...interface{}) (int64, error)
 }
 
-// Execute a set of migrations
-//
-// Returns the number of applied migrations.
+/*
+Exec executes a set of migrations.
+
+Returns the number of applied migrations.
+*/
 func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
 	return ExecMax(db, dialect, m, dir, 0)
 }
 
-// Execute a set of migrations
-//
-// Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
-//
-// Returns the number of applied migrations.
+/*
+ExecMax executes a set of migrations.
+
+Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
+
+Returns the number of applied migrations.
+*/
 func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
 	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
@@ -441,7 +478,9 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	return applied, nil
 }
 
-// Plan a migration.
+/*
+PlanMigration plans a migration.
+*/
 func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap, err := getMigrationDbMap(db, dialect)
 	if err != nil {
@@ -520,11 +559,13 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	return result, dbMap, nil
 }
 
-// Skip a set of migrations
-//
-// Will skip at most `max` migrations. Pass 0 for no limit.
-//
-// Returns the number of skipped migrations.
+/*
+SkipMax skips a set of migrations.
+
+Will skip at most `max` migrations. Pass 0 for no limit.
+
+Returns the number of skipped migrations.
+*/
 func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
 	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
@@ -569,7 +610,9 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	return applied, nil
 }
 
-// Filter a slice of migrations into ones that should be applied.
+/*
+ToApply filters a slice of migrations into ones that should be applied.
+*/
 func ToApply(migrations []*Migration, current string, direction MigrationDirection) []*Migration {
 	var index = -1
 	if current != "" {
@@ -599,6 +642,9 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	panic("Not possible")
 }
 
+/*
+ToCatchup finds out which up-migrations need to run to have the database up-to-date.
+*/
 func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) []*PlannedMigration {
 	missing := make([]*PlannedMigration, 0)
 	for _, migration := range migrations {
@@ -620,6 +666,9 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 	return missing
 }
 
+/*
+GetMigrationRecords gets the migration records from the database.
+*/
 func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error) {
 	dbMap, err := getMigrationDbMap(db, dialect)
 	if err != nil {
@@ -656,9 +705,8 @@ func getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
 
 Make sure that the parseTime option is supplied to your database connection.
 Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
-			} else {
-				return nil, err
 			}
+			return nil, err
 		}
 	}
 

@@ -8,9 +8,13 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 )
 
+// RedoCommand is the method receiver
 type RedoCommand struct {
 }
 
+/*
+Help shows the help text.
+*/
 func (c *RedoCommand) Help() string {
 	helpText := `
 Usage: sql-migrate redo [options] ...
@@ -27,10 +31,16 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
+/*
+Synopsis returns the short description.
+*/
 func (c *RedoCommand) Synopsis() string {
 	return "Reapply the last migration"
 }
 
+/*
+Run executes via commandline parameters.
+*/
 func (c *RedoCommand) Run(args []string) int {
 	var dryrun bool
 

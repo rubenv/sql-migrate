@@ -32,18 +32,23 @@ var (
 	LineSeparator = ""
 )
 
+/*
+errNoTerminator returns an error if there is no terminator found
+*/
 func errNoTerminator() error {
 	if len(LineSeparator) == 0 {
 		return errors.New(`ERROR: The last statement must be ended by a semicolon or '-- +migrate StatementEnd' marker.
 			See https://github.com/rubenv/sql-migrate for details.`)
 	}
 
-	return errors.New(fmt.Sprintf(`ERROR: The last statement must be ended by a semicolon, a line whose contents are %q, or '-- +migrate StatementEnd' marker.
-			See https://github.com/rubenv/sql-migrate for details.`, LineSeparator))
+	return fmt.Errorf(`ERROR: The last statement must be ended by a semicolon, a line whose contents are %q, or '-- +migrate StatementEnd' marker.
+			See https://github.com/rubenv/sql-migrate for details.`, LineSeparator)
 }
 
-// Checks the line to see if the line has a statement-ending semicolon
-// or if the line contains a double-dash comment.
+/*
+endsWithSemicolon checks the line to see if the line has a statement-ending semicolon
+or if the line contains a double-dash comment.
+*/
 func endsWithSemicolon(line string) bool {
 
 	prev := ""
@@ -74,6 +79,9 @@ type migrateCommand struct {
 	Options []string
 }
 
+/*
+HasOption returns if a specified option exist.
+*/
 func (c *migrateCommand) HasOption(opt string) bool {
 	for _, specifiedOption := range c.Options {
 		if specifiedOption == opt {
@@ -84,6 +92,9 @@ func (c *migrateCommand) HasOption(opt string) bool {
 	return false
 }
 
+/*
+parseCommand parses an sql-migrate command
+*/
 func parseCommand(line string) (*migrateCommand, error) {
 	cmd := &migrateCommand{}
 
@@ -103,15 +114,17 @@ func parseCommand(line string) (*migrateCommand, error) {
 	return cmd, nil
 }
 
-// Split the given sql script into individual statements.
-//
-// The base case is to simply split on semicolons, as these
-// naturally terminate a statement.
-//
-// However, more complex cases like pl/pgsql can have semicolons
-// within a statement. For these cases, we provide the explicit annotations
-// 'StatementBegin' and 'StatementEnd' to allow the script to
-// tell us to ignore semicolons.
+/*
+ParseMigration splits the given sql script into individual statements.
+
+The base case is to simply split on semicolons, as these
+naturally terminate a statement.
+
+However, more complex cases like pl/pgsql can have semicolons
+within a statement. For these cases, we provide the explicit annotations
+'StatementBegin' and 'StatementEnd' to allow the script to
+tell us to ignore semicolons.
+*/
 func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 	p := &ParsedMigration{}
 

@@ -4,12 +4,16 @@ import (
 	"flag"
 	"strings"
 
-	"github.com/rubenv/sql-migrate"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
+// DownCommand is the method receiver
 type DownCommand struct {
 }
 
+/*
+Help shows the help text.
+*/
 func (c *DownCommand) Help() string {
 	helpText := `
 Usage: sql-migrate down [options] ...
@@ -27,10 +31,16 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
+/*
+Synopsis returns the short description.
+*/
 func (c *DownCommand) Synopsis() string {
 	return "Undo a database migration"
 }
 
+/*
+Run executes via commandline parameters.
+*/
 func (c *DownCommand) Run(args []string) int {
 	var limit int
 	var dryrun bool
