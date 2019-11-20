@@ -27,26 +27,20 @@ const (
 
 // MigrationSet provides database parameters for a migration execution
 type MigrationSet struct {
-	// Name of the table used to store migration info.
-	tableName string
-	// Name of a schema that the migration table be referenced.
-	schemaName string
+	// TableName name of the table used to store migration info.
+	TableName string
+	// SchemaName schema that the migration table be referenced.
+	SchemaName string
 }
+
+var migSet = MigrationSet{}
 
 // NewMigrationSet returns a parametrized Migration object
-func NewMigrationSet(schemaName string, tableName string) MigrationSet {
-	if tableName == "" {
-		tableName = "gorp_migrations"
+func (ms MigrationSet) getTableName() string {
+	if ms.TableName == "" {
+		return "gorp_migrations"
 	}
-	return MigrationSet{
-		tableName:  tableName,
-		schemaName: schemaName,
-	}
-}
-
-var migSet = MigrationSet{
-	tableName:  "gorp_migrations",
-	schemaName: "",
+	return ms.TableName
 }
 
 var numberPrefixRegex = regexp.MustCompile(`^(\d+).*$`)
@@ -95,14 +89,14 @@ func (e *TxError) Error() string {
 // Should be called before any other call such as (Exec, ExecMax, ...).
 func SetTable(name string) {
 	if name != "" {
-		migSet.tableName = name
+		migSet.TableName = name
 	}
 }
 
 // SetSchema sets the name of a schema that the migration table be referenced.
 func SetSchema(name string) {
 	if name != "" {
-		migSet.schemaName = name
+		migSet.SchemaName = name
 	}
 }
 
@@ -490,7 +484,7 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	}
 
 	var migrationRecords []MigrationRecord
-	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", dbMap.Dialect.QuotedTableForQuery(ms.schemaName, ms.tableName)))
+	_, err = dbMap.Select(&migrationRecords, fmt.Sprintf("SELECT * FROM %s", dbMap.Dialect.QuotedTableForQuery(ms.SchemaName, ms.getTableName())))
 	if err != nil {
 		return nil, nil, err
 	}
@@ -667,7 +661,7 @@ func (ms MigrationSet) GetMigrationRecords(db *sql.DB, dialect string) ([]*Migra
 	}
 
 	var records []*MigrationRecord
-	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", dbMap.Dialect.QuotedTableForQuery(ms.schemaName, ms.tableName))
+	query := fmt.Sprintf("SELECT * FROM %s ORDER BY id ASC", dbMap.Dialect.QuotedTableForQuery(ms.SchemaName, ms.getTableName()))
 	_, err = dbMap.Select(&records, query)
 	if err != nil {
 		return nil, err
@@ -704,7 +698,7 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 
 	// Create migration database map
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
-	dbMap.AddTableWithNameAndSchema(MigrationRecord{}, ms.schemaName, ms.tableName).SetKeys(false, "Id")
+	dbMap.AddTableWithNameAndSchema(MigrationRecord{}, ms.SchemaName, ms.getTableName()).SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 
 	err := dbMap.CreateTablesIfNotExists()
