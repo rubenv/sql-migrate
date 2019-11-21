@@ -3,10 +3,10 @@ language: go
 sudo: false
 
 go:
-    - 1.11.x
-    - 1.12.x
-    - 1.13.x
-
+    - "1.11"
+    - "1.12"
+    - "1.13"
+    
 services:
     - mysql
     - postgresql

@@ -557,3 +557,53 @@ func (s *SqliteMigrateSuite) TestExecWithUnknownMigrationInDatabase(c *C) {
 	_, err = s.DbMap.Exec("SELECT age FROM people")
 	c.Assert(err, NotNil)
 }
+
+func (s *SqliteMigrateSuite) TestRunMigrationObjDefaultTable(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: sqliteMigrations[:1],
+	}
+
+	ms := MigrationSet{}
+	// Executes one migration
+	n, err := ms.Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+
+	// Can use table now
+	_, err = s.DbMap.Exec("SELECT * FROM people")
+	c.Assert(err, IsNil)
+
+	// Uses default tableName
+	_, err = s.DbMap.Exec("SELECT * FROM gorp_migrations")
+	c.Assert(err, IsNil)
+
+	// Shouldn't apply migration again
+	n, err = ms.Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 0)
+}
+
+func (s *SqliteMigrateSuite) TestRunMigrationObjOtherTable(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: sqliteMigrations[:1],
+	}
+
+	ms := MigrationSet{TableName: "other_migrations"}
+	// Executes one migration
+	n, err := ms.Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+
+	// Can use table now
+	_, err = s.DbMap.Exec("SELECT * FROM people")
+	c.Assert(err, IsNil)
+
+	// Uses default tableName
+	_, err = s.DbMap.Exec("SELECT * FROM other_migrations")
+	c.Assert(err, IsNil)
+
+	// Shouldn't apply migration again
+	n, err = ms.Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 0)
+}
