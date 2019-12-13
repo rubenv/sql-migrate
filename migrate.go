@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"bytes"
+	"os"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -228,14 +229,9 @@ func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 
 	for _, info := range files {
 		if strings.HasSuffix(info.Name(), ".sql") {
-			file, err := dir.Open(info.Name())
+			migration, err := migrationFromFile(dir, info)
 			if err != nil {
-				return nil, fmt.Errorf("Error while opening %s: %s", info.Name(), err)
-			}
-
-			migration, err := ParseMigration(info.Name(), file)
-			if err != nil {
-				return nil, fmt.Errorf("Error while parsing %s: %s", info.Name(), err)
+				return nil, err
 			}
 
 			migrations = append(migrations, migration)
@@ -246,6 +242,20 @@ func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 	sort.Sort(byId(migrations))
 
 	return migrations, nil
+}
+
+func migrationFromFile(dir http.FileSystem, info os.FileInfo) (*Migration, error) {
+	file, err := dir.Open(info.Name())
+	if err != nil {
+		return nil, fmt.Errorf("Error while opening %s: %s", info.Name(), err)
+	}
+	defer func () { _ = file.Close() }()
+
+	migration, err := ParseMigration(info.Name(), file)
+	if err != nil {
+		return nil, fmt.Errorf("Error while parsing %s: %s", info.Name(), err)
+	}
+	return migration, nil
 }
 
 // Migrations from a bindata asset set.
