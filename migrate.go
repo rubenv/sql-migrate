@@ -32,6 +32,9 @@ type MigrationSet struct {
 	TableName string
 	// SchemaName schema that the migration table be referenced.
 	SchemaName string
+	// IgnoreUnknown skips the check to see if there is a migration
+	// ran in the database that is not in MigrationSource
+	IgnoreUnknown bool
 }
 
 var migSet = MigrationSet{}
@@ -99,6 +102,12 @@ func SetSchema(name string) {
 	if name != "" {
 		migSet.SchemaName = name
 	}
+}
+
+// SetIgnoreUnknown sets the flag that skips database check to see if there is a
+// migration in the database that is not in migration source.
+func SetIgnoreUnknown(v bool) {
+	migSet.IgnoreUnknown = v
 }
 
 type Migration struct {
@@ -510,13 +519,15 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 
 	// Make sure all migrations in the database are among the found migrations which
 	// are to be applied.
-	migrationsSearch := make(map[string]struct{})
-	for _, migration := range migrations {
-		migrationsSearch[migration.Id] = struct{}{}
-	}
-	for _, existingMigration := range existingMigrations {
-		if _, ok := migrationsSearch[existingMigration.Id]; !ok {
-			return nil, nil, newPlanError(existingMigration, "unknown migration in database")
+	if !ms.IgnoreUnknown {
+		migrationsSearch := make(map[string]struct{})
+		for _, migration := range migrations {
+			migrationsSearch[migration.Id] = struct{}{}
+		}
+		for _, existingMigration := range existingMigrations {
+			if _, ok := migrationsSearch[existingMigration.Id]; !ok {
+				return nil, nil, newPlanError(existingMigration, "unknown migration in database")
+			}
 		}
 	}
 
