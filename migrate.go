@@ -35,7 +35,7 @@ type MigrationSet struct {
 	// IgnoreUnknown skips the check to see if there is a migration
 	// ran in the database that is not in MigrationSource.
 	//
-	// This should be used sparingly as it is removing a saftey check.
+	// This should be used sparingly as it is removing a safety check.
 	IgnoreUnknown bool
 }
 
