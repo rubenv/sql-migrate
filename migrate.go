@@ -33,7 +33,9 @@ type MigrationSet struct {
 	// SchemaName schema that the migration table be referenced.
 	SchemaName string
 	// IgnoreUnknown skips the check to see if there is a migration
-	// ran in the database that is not in MigrationSource
+	// ran in the database that is not in MigrationSource.
+	//
+	// This should be used sparingly as it is removing a saftey check.
 	IgnoreUnknown bool
 }
 
@@ -106,6 +108,8 @@ func SetSchema(name string) {
 
 // SetIgnoreUnknown sets the flag that skips database check to see if there is a
 // migration in the database that is not in migration source.
+//
+// This should be used sparingly as it is removing a saftey check.
 func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
 }
