@@ -109,7 +109,7 @@ func SetSchema(name string) {
 // SetIgnoreUnknown sets the flag that skips database check to see if there is a
 // migration in the database that is not in migration source.
 //
-// This should be used sparingly as it is removing a saftey check.
+// This should be used sparingly as it is removing a safety check.
 func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
 }
