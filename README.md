@@ -138,7 +138,7 @@ Import sql-migrate into your application:
 import "github.com/rubenv/sql-migrate"
 ```
 
-Set up a source of migrations, this can be from memory, from a set of files or from bindata (more on that later):
+Set up a source of migrations, this can be from memory, from a set of files, from bindata (more on that later), or from any library that implements [`http.FileSystem`](https://godoc.org/net/http#FileSystem):
 
 ```go
 // Hardcoded strings in memory:
@@ -167,6 +167,11 @@ migrations := &migrate.AssetMigrationSource{
     Asset:    Asset,
     AssetDir: AssetDir,
     Dir:      "migrations",
+}
+
+// OR: Read migrations from a `http.FileSystem`
+migrationSource := &migrate.HttpFileSystemMigrationSource{
+    FileSystem: httpFS,
 }
 ```
 
@@ -300,6 +305,16 @@ migrations := &migrate.AssetMigrationSource{
 Both `Asset` and `AssetDir` are functions provided by bindata.
 
 Then proceed as usual.
+
+## Embedding migrations with libraries that implement `http.FileSystem`
+
+You can also embed migrations with any library that implements `http.FileSystem`, like [`vfsgen`](https://github.com/shurcooL/vfsgen), [`parcello`](https://github.com/phogolabs/parcello), or [`go-resources`](https://github.com/omeid/go-resources).
+
+```go
+migrationSource := &migrate.HttpFileSystemMigrationSource{
+    FileSystem: httpFS,
+}
+```
 
 ## Extending
 
