@@ -747,11 +747,15 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 	}
 
 	err := dbMap.CreateTablesIfNotExists()
-	// Oracle database does not support `if not exists`, so use `ORA-00955:` error code
-	// to check if the table exists.
-	if err != nil && dialect == "oci8" && !strings.HasPrefix(err.Error(), "ORA-00955:") {
+	if err != nil {
+		// Oracle database does not support `if not exists`, so use `ORA-00955:` error code
+		// to check if the table exists.
+		if dialect == "oci8" && strings.HasPrefix(err.Error(), "ORA-00955:") {
+			return dbMap, nil
+		}
 		return nil, err
 	}
+
 	return dbMap, nil
 }
 
