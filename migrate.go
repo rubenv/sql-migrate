@@ -2,12 +2,12 @@ package migrate
 
 import (
 	"bytes"
-	"os"
 	"database/sql"
 	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -171,12 +171,28 @@ type MigrationRecord struct {
 	AppliedAt time.Time `db:"applied_at"`
 }
 
+type OracleDialect struct {
+	gorp.OracleDialect
+}
+
+func (d OracleDialect) IfTableNotExists(command, schema, table string) string {
+	return command
+}
+
+func (d OracleDialect) IfSchemaNotExists(command, schema string) string {
+	return command
+}
+
+func (d OracleDialect) IfTableExists(command, schema, table string) string {
+	return command
+}
+
 var MigrationDialects = map[string]gorp.Dialect{
 	"sqlite3":  gorp.SqliteDialect{},
 	"postgres": gorp.PostgresDialect{},
 	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
 	"mssql":    gorp.SqlServerDialect{},
-	"oci8":     gorp.OracleDialect{},
+	"oci8":     OracleDialect{},
 }
 
 type MigrationSource interface {
@@ -262,7 +278,7 @@ func migrationFromFile(dir http.FileSystem, info os.FileInfo) (*Migration, error
 	if err != nil {
 		return nil, fmt.Errorf("Error while opening %s: %s", info.Name(), err)
 	}
-	defer func () { _ = file.Close() }()
+	defer func() { _ = file.Close() }()
 
 	migration, err := ParseMigration(info.Name(), file)
 	if err != nil {
@@ -723,11 +739,20 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 
 	// Create migration database map
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
-	dbMap.AddTableWithNameAndSchema(MigrationRecord{}, ms.SchemaName, ms.getTableName()).SetKeys(false, "Id")
+	table := dbMap.AddTableWithNameAndSchema(MigrationRecord{}, ms.SchemaName, ms.getTableName()).SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
+
+	if dialect == "oci8" {
+		table.ColMap("Id").SetMaxSize(4000)
+	}
 
 	err := dbMap.CreateTablesIfNotExists()
 	if err != nil {
+		// Oracle database does not support `if not exists`, so use `ORA-00955:` error code
+		// to check if the table exists.
+		if dialect == "oci8" && strings.HasPrefix(err.Error(), "ORA-00955:") {
+			return dbMap, nil
+		}
 		return nil, err
 	}
 
