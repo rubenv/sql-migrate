@@ -457,6 +457,10 @@ func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, di
 		}
 
 		for _, stmt := range migration.Queries {
+			// remove the semicolon from stmt, fix ORA-00922 issue in database oracle
+			stmt = strings.TrimSuffix(stmt, "\n")
+			stmt = strings.TrimSuffix(stmt, " ")
+			stmt = strings.TrimSuffix(stmt, ";")
 			if _, err := executor.Exec(stmt); err != nil {
 				if trans, ok := executor.(*gorp.Transaction); ok {
 					_ = trans.Rollback()
