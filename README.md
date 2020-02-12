@@ -130,6 +130,25 @@ production:
 
 See [here](https://github.com/go-sql-driver/mysql#parsetime) for more information.
 
+### Oracle
+Oracle Driver is [oci8](https://github.com/mattn/go-oci8), it is not pure golang code and rely on Oracle Office Client([Instant Client](https://www.oracle.com/technetwork/database/database-technologies/instant-client/downloads/index.html)), more detail information is [oci8 repo](https://github.com/mattn/go-oci8).
+
+**Installation specified sql-migrate**
+
+To install the library and command line program, use the following:
+
+```bash
+go get -tags oracle -v github.com/rubenv/sql-migrate/...
+```
+
+```yml
+development:
+    dialect: oci8
+    datasource: user/password@localhost:1521/sid
+    dir: migrations/oracle
+    table: migrations
+```
+
 ### As a library
 
 Import sql-migrate into your application:
