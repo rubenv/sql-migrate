@@ -193,6 +193,7 @@ var MigrationDialects = map[string]gorp.Dialect{
 	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
 	"mssql":    gorp.SqlServerDialect{},
 	"oci8":     OracleDialect{},
+	"godror":   OracleDialect{},
 }
 
 type MigrationSource interface {
@@ -746,7 +747,7 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 	table := dbMap.AddTableWithNameAndSchema(MigrationRecord{}, ms.SchemaName, ms.getTableName()).SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 
-	if dialect == "oci8" {
+	if dialect == "oci8" || dialect == "godror" {
 		table.ColMap("Id").SetMaxSize(4000)
 	}
 
@@ -754,7 +755,11 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 	if err != nil {
 		// Oracle database does not support `if not exists`, so use `ORA-00955:` error code
 		// to check if the table exists.
-		if dialect == "oci8" && strings.HasPrefix(err.Error(), "ORA-00955:") {
+		if oerr := errors.Unwrap(err); oerr != nil {
+			err = oerr
+		}
+
+		if (dialect == "oci8" || dialect == "godror") && strings.HasPrefix(err.Error(), "ORA-00955:") {
 			return dbMap, nil
 		}
 		return nil, err

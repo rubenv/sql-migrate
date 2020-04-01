@@ -130,7 +130,7 @@ production:
 
 See [here](https://github.com/go-sql-driver/mysql#parsetime) for more information.
 
-### Oracle
+### Oracle(oci8)
 Oracle Driver is [oci8](https://github.com/mattn/go-oci8), it is not pure golang code and rely on Oracle Office Client([Instant Client](https://www.oracle.com/technetwork/database/database-technologies/instant-client/downloads/index.html)), more detail information is [oci8 repo](https://github.com/mattn/go-oci8).
 
 #### Install with Oracle support
@@ -148,6 +148,37 @@ development:
     dir: migrations/oracle
     table: migrations
 ```
+
+### Oracle(godror)
+Oracle Driver is [godror](https://github.com/godror/godror), it is not pure golang code and rely on Oracle Office Client([Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html)), more detail information is [godror repo](https://github.com/godror/godror).
+
+#### Install with Oracle support
+
+To install the library and command line program, use the following:
+
+1. Install sql-migrate
+```bash
+CGO_ENABLED=1 GO111MODULE=on go get -tags godror -v github.com/rubenv/sql-migrate/...
+```
+
+2. Download Oracle Office Client(e.g. macos, click [Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html) if you are other system)
+```bash
+wget https://download.oracle.com/otn_software/mac/instantclient/193000/instantclient-basic-macos.x64-19.3.0.0.0dbru.zip
+```
+
+3. Configure environment variables `LD_LIBRARY_PATH`
+```
+export LD_LIBRARY_PATH=your_oracle_office_path/instantclient_19_3
+```
+
+```yml
+development:
+    dialect: godror 
+    datasource: user/password@localhost:1521/sid
+    dir: migrations/oracle
+    table: migrations
+```
+
 
 ### As a library
 
