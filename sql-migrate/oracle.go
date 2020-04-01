@@ -1,4 +1,4 @@
-// +build oracle
+// +build oci8
 
 package main
 

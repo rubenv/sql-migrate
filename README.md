@@ -138,7 +138,7 @@ Oracle Driver is [oci8](https://github.com/mattn/go-oci8), it is not pure golang
 To install the library and command line program, use the following:
 
 ```bash
-go get -tags oracle -v github.com/rubenv/sql-migrate/...
+go get -tags oci8 -v github.com/rubenv/sql-migrate/...
 ```
 
 ```yml
