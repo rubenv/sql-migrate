@@ -22,6 +22,7 @@ install:
     - go get -u github.com/kisielk/errcheck
 
 script:
+    - CGO_ENABLED=0 go build -v .
     - go test -v ./...
     - bash test-integration/postgres.sh
     - bash test-integration/mysql.sh
