@@ -130,15 +130,15 @@ production:
 
 See [here](https://github.com/go-sql-driver/mysql#parsetime) for more information.
 
-### Oracle(oci8)
-Oracle Driver is [oci8](https://github.com/mattn/go-oci8), it is not pure golang code and rely on Oracle Office Client([Instant Client](https://www.oracle.com/technetwork/database/database-technologies/instant-client/downloads/index.html)), more detail information is [oci8 repo](https://github.com/mattn/go-oci8).
+### Oracle (oci8)
+Oracle Driver is [oci8](https://github.com/mattn/go-oci8), it is not pure Go code and relies on Oracle Office Client ([Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html)), more detailed information is in the [oci8 repo](https://github.com/mattn/go-oci8).
 
 #### Install with Oracle support
 
 To install the library and command line program, use the following:
 
 ```bash
-go get -tags oci8 -v github.com/rubenv/sql-migrate/...
+go get -tags oracle -v github.com/rubenv/sql-migrate/...
 ```
 
 ```yml
@@ -149,8 +149,8 @@ development:
     table: migrations
 ```
 
-### Oracle(godror)
-Oracle Driver is [godror](https://github.com/godror/godror), it is not pure golang code and rely on Oracle Office Client([Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html)), more detail information is [godror repo](https://github.com/godror/godror).
+### Oracle (godror)
+Oracle Driver is [godror](https://github.com/godror/godror), it is not pure Go code and relies on Oracle Office Client ([Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html)), more detailed information is in the [godror repository](https://github.com/godror/godror).
 
 #### Install with Oracle support
 
@@ -158,7 +158,7 @@ To install the library and command line program, use the following:
 
 1. Install sql-migrate
 ```bash
-CGO_ENABLED=1 GO111MODULE=on go get -tags godror -v github.com/rubenv/sql-migrate/...
+go get -tags godror -v github.com/rubenv/sql-migrate/...
 ```
 
 2. Download Oracle Office Client(e.g. macos, click [Instant Client](https://www.oracle.com/database/technologies/instant-client/downloads.html) if you are other system)
