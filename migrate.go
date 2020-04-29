@@ -275,7 +275,8 @@ func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 }
 
 func migrationFromFile(dir http.FileSystem, info os.FileInfo) (*Migration, error) {
-	file, err := dir.Open(info.Name())
+	path := fmt.Sprintf("/%s", strings.TrimPrefix(info.Name(), "/"))
+	file, err := dir.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("Error while opening %s: %s", info.Name(), err)
 	}
