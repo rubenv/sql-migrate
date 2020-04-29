@@ -173,7 +173,7 @@ export LD_LIBRARY_PATH=your_oracle_office_path/instantclient_19_3
 
 ```yml
 development:
-    dialect: godror 
+    dialect: godror
     datasource: user/password@localhost:1521/sid
     dir: migrations/oracle
     table: migrations
@@ -210,6 +210,11 @@ migrations := &migrate.FileMigrationSource{
 // OR: Use migrations from a packr box
 migrations := &migrate.PackrMigrationSource{
     Box: packr.New("migrations", "./migrations"),
+}
+
+// OR: Use pkger which implements `http.FileSystem`
+migrationSource := &migrate.HttpFileSystemMigrationSource{
+    FileSystem: pkger.Dir("/db/migrations"),
 }
 
 // OR: Use migrations from bindata:
