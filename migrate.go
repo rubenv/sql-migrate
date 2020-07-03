@@ -6,6 +6,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -37,9 +39,16 @@ type MigrationSet struct {
 	//
 	// This should be used sparingly as it is removing a safety check.
 	IgnoreUnknown bool
+	Log           *log.Logger
 }
 
-var migSet = MigrationSet{}
+var migSet = MigrationSet{
+	Log: log.New(ioutil.Discard, "SQL: ", log.Llongfile),
+}
+
+func SetLogger(log *log.Logger) {
+	migSet.Log = log
+}
 
 // NewMigrationSet returns a parametrized Migration object
 func (ms MigrationSet) getTableName() string {
