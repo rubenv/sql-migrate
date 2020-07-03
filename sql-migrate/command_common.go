@@ -2,11 +2,13 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"os"
 
 	"github.com/rubenv/sql-migrate"
 )
 
-func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) error {
+func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, verbose bool) error {
 	env, err := GetEnvironment()
 	if err != nil {
 		return fmt.Errorf("Could not parse config: %s", err)
@@ -21,6 +23,9 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 		Dir: env.Dir,
 	}
 
+	if verbose {
+		migrate.SetLogger(log.New(os.Stdout, "SQL: ", log.Llongfile))
+	}
 	if dryrun {
 		migrations, _, err := migrate.PlanMigration(db, dialect, source, dir, limit)
 		if err != nil {
