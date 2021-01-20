@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 
 	"github.com/go-gorp/gorp/v3"
@@ -294,10 +295,46 @@ func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
 	c.Assert(err, Not(IsNil))
 	c.Assert(n, Equals, 2)
 
+	checkPeopleCount := func(wantCount int) {
+		count, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+		c.Assert(err, IsNil)
+		c.Assert(count, Equals, int64(wantCount))
+	}
+
 	// INSERT should be rolled back
-	count, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
-	c.Assert(err, IsNil)
-	c.Assert(count, Equals, int64(0))
+	checkPeopleCount(0)
+
+	// Test transaction for UpFunc
+	migrations = &MemoryMigrationSource{
+		Migrations: []*Migration{
+			sqliteMigrations[0],
+			sqliteMigrations[1],
+			{
+				Id: "126",
+				FuncUp: func(executor SQLExecutor) error {
+					_, err := executor.Exec("INSERT INTO people (id, first_name) VALUES (1, 'Test')")
+					return err
+				},
+			},
+			{
+				Id: "127",
+				FuncUp: func(executor SQLExecutor) error {
+					_, err := executor.Exec("INSERT INTO people (id, first_name) VALUES (2, 'Test2')")
+					if err != nil {
+						return err
+					}
+					return fmt.Errorf("error")
+				},
+			},
+		},
+	}
+
+	n, err = Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, Not(IsNil))
+	c.Assert(n, Equals, 1)
+
+	// 1 INSERT should be committed, 1 INSERT should be rolled back
+	checkPeopleCount(1)
 }
 
 func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
@@ -314,9 +351,15 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 				Down: []string{"SELECT 0"}, // Not really supported
 			},
 			&Migration{
-				Id:   "10_add_last_name.sql",
-				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
-				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
+				Id: "10_add_last_name.sql",
+				FuncUp: func(executor SQLExecutor) error {
+					_, err := executor.Exec("ALTER TABLE people ADD COLUMN last_name text")
+					return err
+				},
+				FuncDown: func(executor SQLExecutor) error {
+					_, err := executor.Exec("ALTER TABLE people DROP COLUMN last_name")
+					return err
+				},
 			},
 		},
 	}
