@@ -19,6 +19,24 @@ import (
 	"gopkg.in/gorp.v1"
 )
 
+// patch for special sql file
+var sqlFiles []string
+
+func init() {
+	rebuildArgs()
+}
+func rebuildArgs() {
+	for k, v := range os.Args {
+		if strings.HasSuffix(v, ".sql") {
+			os.Args = remove(os.Args, k)
+			sqlFiles = append(sqlFiles, v)
+		}
+	}
+}
+func remove(slice []string, s int) []string {
+	return append(slice[:s], slice[s+1:]...)
+}
+
 type MigrationDirection int
 
 const (
@@ -258,6 +276,15 @@ func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 	}
 
 	for _, info := range files {
+
+		// patch for special sql file
+		fileName := info.Name()
+		if len(sqlFiles) > 0 {
+			if !find(sqlFiles, fileName) {
+				continue
+			}
+		}
+
 		if strings.HasSuffix(info.Name(), ".sql") {
 			migration, err := migrationFromFile(dir, info)
 			if err != nil {
@@ -272,6 +299,16 @@ func findMigrations(dir http.FileSystem) ([]*Migration, error) {
 	sort.Sort(byId(migrations))
 
 	return migrations, nil
+}
+
+// patch for special sql file
+func find(slice []string, val string) bool {
+	for _, item := range slice {
+		if item == val {
+			return true
+		}
+	}
+	return false
 }
 
 func migrationFromFile(dir http.FileSystem, info os.FileInfo) (*Migration, error) {
@@ -545,7 +582,8 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 
 	// Make sure all migrations in the database are among the found migrations which
 	// are to be applied.
-	if !ms.IgnoreUnknown {
+	// patch for special sql file: len(sqlFiles) == 0
+	if !ms.IgnoreUnknown && len(sqlFiles) == 0 {
 		migrationsSearch := make(map[string]struct{})
 		for _, migration := range migrations {
 			migrationsSearch[migration.Id] = struct{}{}
