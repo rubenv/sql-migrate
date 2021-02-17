@@ -15,8 +15,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-gorp/gorp/v3"
 	"github.com/rubenv/sql-migrate/sqlparse"
-	"gopkg.in/gorp.v1"
 )
 
 type MigrationDirection int
@@ -114,10 +114,18 @@ func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
 }
 
+type SQLExecutor interface {
+	Exec(query string, args ...interface{}) (sql.Result, error)
+	Query(query string, args ...interface{}) (*sql.Rows, error)
+	QueryRow(query string, args ...interface{}) *sql.Row
+}
+
 type Migration struct {
-	Id   string
-	Up   []string
-	Down []string
+	Id       string
+	Up       []string
+	Down     []string
+	FuncUp   func(executor SQLExecutor) error
+	FuncDown func(executor SQLExecutor) error
 
 	DisableTransactionUp   bool
 	DisableTransactionDown bool
@@ -158,6 +166,7 @@ type PlannedMigration struct {
 
 	DisableTransaction bool
 	Queries            []string
+	Func               func(executor SQLExecutor) error
 }
 
 type byId []*Migration
@@ -410,6 +419,7 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 	return m, nil
 }
 
+// Deprecated: Not expected to be used.
 type SqlExecutor interface {
 	Exec(query string, args ...interface{}) (sql.Result, error)
 	Insert(list ...interface{}) error
@@ -447,7 +457,7 @@ func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, di
 	// Apply migrations
 	applied := 0
 	for _, migration := range migrations {
-		var executor SqlExecutor
+		var executor gorp.SqlExecutor
 
 		if migration.DisableTransaction {
 			executor = dbMap
@@ -468,6 +478,15 @@ func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, di
 					_ = trans.Rollback()
 				}
 
+				return applied, newTxError(migration, err)
+			}
+		}
+
+		if migration.Func != nil {
+			if err = migration.Func(executor); err != nil {
+				if trans, ok := executor.(*gorp.Transaction); ok {
+					_ = trans.Rollback()
+				}
 				return applied, newTxError(migration, err)
 			}
 		}
@@ -583,12 +602,14 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 			result = append(result, &PlannedMigration{
 				Migration:          v,
 				Queries:            v.Up,
+				Func:               v.FuncUp,
 				DisableTransaction: v.DisableTransactionUp,
 			})
 		} else if dir == Down {
 			result = append(result, &PlannedMigration{
 				Migration:          v,
 				Queries:            v.Down,
+				Func:               v.FuncDown,
 				DisableTransaction: v.DisableTransactionDown,
 			})
 		}
@@ -611,7 +632,7 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	// Skip migrations
 	applied := 0
 	for _, migration := range migrations {
-		var executor SqlExecutor
+		var executor gorp.SqlExecutor
 
 		if migration.DisableTransaction {
 			executor = dbMap
