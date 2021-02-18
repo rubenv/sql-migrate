@@ -3,6 +3,7 @@ package migrate
 import (
 	"bytes"
 	"database/sql"
+	"embed"
 	"errors"
 	"fmt"
 	"io"
@@ -220,6 +221,20 @@ func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	return migrations, nil
 }
 
+// A set of migrations loaded from an go1.16 embed.FS
+
+type EmbedFileSystemMigrationSource struct {
+	FileSystem embed.FS
+
+	Root string
+}
+
+var _ MigrationSource = (*EmbedFileSystemMigrationSource)(nil)
+
+func (f EmbedFileSystemMigrationSource) FindMigrations() ([]*Migration, error) {
+	return findMigrations(http.FS(f.FileSystem), f.Root)
+}
+
 // A set of migrations loaded from an http.FileServer
 
 type HttpFileSystemMigrationSource struct {
@@ -229,7 +244,7 @@ type HttpFileSystemMigrationSource struct {
 var _ MigrationSource = (*HttpFileSystemMigrationSource)(nil)
 
 func (f HttpFileSystemMigrationSource) FindMigrations() ([]*Migration, error) {
-	return findMigrations(f.FileSystem)
+	return findMigrations(f.FileSystem, "/")
 }
 
 // A set of migrations loaded from a directory.
@@ -241,13 +256,13 @@ var _ MigrationSource = (*FileMigrationSource)(nil)
 
 func (f FileMigrationSource) FindMigrations() ([]*Migration, error) {
 	filesystem := http.Dir(f.Dir)
-	return findMigrations(filesystem)
+	return findMigrations(filesystem, "/")
 }
 
-func findMigrations(dir http.FileSystem) ([]*Migration, error) {
+func findMigrations(dir http.FileSystem, root string) ([]*Migration, error) {
 	migrations := make([]*Migration, 0)
 
-	file, err := dir.Open("/")
+	file, err := dir.Open(root)
 	if err != nil {
 		return nil, err
 	}
