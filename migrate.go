@@ -291,7 +291,6 @@ func findMigrations(dir http.FileSystem, root string) ([]*Migration, error) {
 }
 
 func migrationFromFile(dir http.FileSystem, root string, info os.FileInfo) (*Migration, error) {
-	// path := fmt.Sprintf("/%s", strings.TrimPrefix(info.Name(), "/"))
 	path := filepath.Join(root, info.Name())
 	file, err := dir.Open(path)
 	if err != nil {
