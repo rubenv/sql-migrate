@@ -3,7 +3,6 @@ package migrate
 import (
 	"bytes"
 	"database/sql"
-	"embed"
 	"errors"
 	"fmt"
 	"io"
@@ -220,20 +219,6 @@ func (m MemoryMigrationSource) FindMigrations() ([]*Migration, error) {
 	copy(migrations, m.Migrations)
 	sort.Sort(byId(migrations))
 	return migrations, nil
-}
-
-// A set of migrations loaded from an go1.16 embed.FS
-
-type EmbedFileSystemMigrationSource struct {
-	FileSystem embed.FS
-
-	Root string
-}
-
-var _ MigrationSource = (*EmbedFileSystemMigrationSource)(nil)
-
-func (f EmbedFileSystemMigrationSource) FindMigrations() ([]*Migration, error) {
-	return findMigrations(http.FS(f.FileSystem), f.Root)
 }
 
 // A set of migrations loaded from an http.FileServer
