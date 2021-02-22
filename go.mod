@@ -1,6 +1,6 @@
 module github.com/rubenv/sql-migrate
 
-go 1.11
+go 1.16
 
 require (
 	github.com/denisenkom/go-mssqldb v0.0.0-20191001013358-cfbb681360f0
