@@ -3,7 +3,7 @@ module github.com/rubenv/sql-migrate
 go 1.16
 
 require (
-	github.com/denisenkom/go-mssqldb v0.0.0-20191001013358-cfbb681360f0
+	github.com/denisenkom/go-mssqldb v0.9.0
 	github.com/go-sql-driver/mysql v1.4.1
 	github.com/gobuffalo/packr/v2 v2.7.1
 	github.com/godror/godror v0.13.3
