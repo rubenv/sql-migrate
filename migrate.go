@@ -37,6 +37,12 @@ type MigrationSet struct {
 	//
 	// This should be used sparingly as it is removing a safety check.
 	IgnoreUnknown bool
+	// IncludeMissing configures the migration plan to include all missing migrations
+	// even if they are considered 'older' than other existing migrations.
+	// By default only migrations that are considered 'newer' (according to the migration
+	// Id naming conventions) are included in hte migration plan.
+	// This flag can be used to include all missing migrations.
+	IncludeMissing bool
 }
 
 var migSet = MigrationSet{}
@@ -112,6 +118,15 @@ func SetSchema(name string) {
 // This should be used sparingly as it is removing a safety check.
 func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
+}
+
+// SetIncludeMissing sets teh flag that configures the migration plan to include all missing
+// migrations even if they are considered 'older' than other existing migrations.
+// By default only migrations that are considered 'newer' (according to the migration
+// Id naming conventions) are included in hte migration plan.
+// This flag can be used to include all missing migrations.
+func SetIncludeMissing(v bool) {
+	migSet.IncludeMissing = v
 }
 
 type Migration struct {
@@ -568,7 +583,7 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	// Add missing migrations up to the last run migration.
 	// This can happen for example when merges happened.
 	if len(existingMigrations) > 0 {
-		result = append(result, ToCatchup(migrations, existingMigrations, record)...)
+		result = append(result, ToCatchup(migrations, existingMigrations, record, ms.IncludeMissing)...)
 	}
 
 	// Figure out which migrations to apply
@@ -676,7 +691,7 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	panic("Not possible")
 }
 
-func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) []*PlannedMigration {
+func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration, includeMissing bool) []*PlannedMigration {
 	missing := make([]*PlannedMigration, 0)
 	for _, migration := range migrations {
 		found := false
@@ -686,7 +701,7 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 				break
 			}
 		}
-		if !found && migration.Less(lastRun) {
+		if !found && (includeMissing || migration.Less(lastRun)) {
 			missing = append(missing, &PlannedMigration{
 				Migration:          migration,
 				Queries:            migration.Up,
