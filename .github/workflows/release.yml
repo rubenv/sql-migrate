@@ -1,0 +1,25 @@
+name: Release
+
+on:
+  release:
+    types: [ created ]
+
+jobs:
+  releases-matrix:
+    name: Release Go Binary
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [ linux, windows, darwin ]
+        goarch: [ amd64 ]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - uses: wangyoucao577/go-release-action@v1.15
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          goos: ${{ matrix.goos }}
+          goarch: ${{ matrix.goarch }}
+          goversion: 1.16
+          pre_command: export CGO_ENABLED=0
+          project_path: "./sql-migrate"
