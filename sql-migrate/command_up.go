@@ -22,7 +22,7 @@ Options:
   -env="development"     Environment.
   -limit=0               Limit the number of migrations (0 = unlimited).
   -dryrun                Don't apply migrations, just print them.
-  -ignoreunknown         Skips the check to see if there is a migration ran in the database that is not in MigrationSource, this should be used sparingly as it is removing a safety check.
+  -ignoreunknown=false   Skips the check to see if there is a migration ran in the database that is not in MigrationSource, this should be used sparingly as it is removing a safety check.
 
 `
 	return strings.TrimSpace(helpText)
