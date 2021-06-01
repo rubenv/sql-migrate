@@ -178,7 +178,7 @@ func (s *SqliteMigrateSuite) TestPackrMigrate(c *C) {
 
 func (s *SqliteMigrateSuite) TestPackrMigrateDir(c *C) {
 	migrations := &PackrMigrationSource{
-		Box: packr.NewBox("."),
+		Box: packr.New(".", "."),
 		Dir: "./test-migrations/",
 	}
 
