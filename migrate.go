@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -276,7 +275,7 @@ func findMigrations(dir http.FileSystem, root string) ([]*Migration, error) {
 }
 
 func migrationFromFile(dir http.FileSystem, root string, info os.FileInfo) (*Migration, error) {
-	path := filepath.Join(root, info.Name())
+	path := path.Join(root, info.Name())
 	file, err := dir.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("Error while opening %s: %s", info.Name(), err)
