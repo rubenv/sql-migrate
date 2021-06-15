@@ -34,18 +34,20 @@ func (c *DownCommand) Synopsis() string {
 func (c *DownCommand) Run(args []string) int {
 	var limit int
 	var dryrun bool
+	var verbose bool
 
 	cmdFlags := flag.NewFlagSet("down", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
 	cmdFlags.IntVar(&limit, "limit", 1, "Max number of migrations to apply.")
 	cmdFlags.BoolVar(&dryrun, "dryrun", false, "Don't apply migrations, just print them.")
+	cmdFlags.BoolVar(&verbose, "verbose", false, "Show queries at console")
 	ConfigFlags(cmdFlags)
 
 	if err := cmdFlags.Parse(args); err != nil {
 		return 1
 	}
 
-	err := ApplyMigrations(migrate.Down, dryrun, limit)
+	err := ApplyMigrations(migrate.Down, dryrun, limit, verbose)
 	if err != nil {
 		ui.Error(err.Error())
 		return 1
