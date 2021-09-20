@@ -648,3 +648,20 @@ func (s *SqliteMigrateSuite) TestRunMigrationObjOtherTable(c *C) {
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
+
+func (s *SqliteMigrateSuite) TestSetDisableCreateTable(c *C) {
+	c.Assert(migSet.DisableCreateTable, Equals, false)
+
+	SetDisableCreateTable(true)
+	c.Assert(migSet.DisableCreateTable, Equals, true)
+
+	SetDisableCreateTable(false)
+	c.Assert(migSet.DisableCreateTable, Equals, false)
+}
+
+func (s *SqliteMigrateSuite) TestGetMigrationDbMapWithDisableCreateTable(c *C) {
+	SetDisableCreateTable(false)
+
+	_, err := migSet.getMigrationDbMap(s.Db, "postgres")
+	c.Assert(err, IsNil)
+}
