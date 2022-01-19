@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os"
 	"path"
 	"regexp"
 	"sort"
@@ -121,13 +120,59 @@ func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
 }
 
-type Migration struct {
-	Id   string
-	Up   []string
-	Down []string
-
+type MigrationData struct {
+	Up                     []string
+	Down                   []string
 	DisableTransactionUp   bool
 	DisableTransactionDown bool
+}
+
+type migrationFile struct {
+	dir      http.FileSystem
+	root     string
+	baseName string
+}
+
+type Migration struct {
+	Id string
+
+	// data may be nil if not parsed yet.
+	data *MigrationData
+	// file is information of migration file, which is used to parse later.
+	// file may be nil if migration file has already been parsed when Migration is initialized.
+	file *migrationFile
+}
+
+// Data parses migration file if not yet, and returns *MigrationData
+func (m *Migration) Data() (*MigrationData, error) {
+	if m.data != nil {
+		return m.data, nil
+	}
+	err := m.loadFile()
+	if err != nil {
+		return nil, err
+	}
+	return m.data, nil
+}
+
+func (m *Migration) loadFile() error {
+	if m.file == nil {
+		return fmt.Errorf("Error m.file must not be nil when call loadFile")
+	}
+	root := m.file.root
+	name := m.file.baseName
+	file, err := m.file.dir.Open(path.Join(root, name))
+	if err != nil {
+		return fmt.Errorf("Error while opening %s: %s", name, err)
+	}
+	defer func() { _ = file.Close() }()
+
+	migrationData, err := ParseMigration(name, file)
+	if err != nil {
+		return fmt.Errorf("Error while parsing %s: %s", name, err)
+	}
+	m.data = migrationData
+	return nil
 }
 
 func (m Migration) Less(other *Migration) bool {
@@ -266,11 +311,14 @@ func findMigrations(dir http.FileSystem, root string) ([]*Migration, error) {
 
 	for _, info := range files {
 		if strings.HasSuffix(info.Name(), ".sql") {
-			migration, err := migrationFromFile(dir, root, info)
-			if err != nil {
-				return nil, err
+			migration := &Migration{
+				Id: info.Name(),
+				file: &migrationFile{
+					dir:      dir,
+					root:     root,
+					baseName: info.Name(),
+				},
 			}
-
 			migrations = append(migrations, migration)
 		}
 	}
@@ -279,21 +327,6 @@ func findMigrations(dir http.FileSystem, root string) ([]*Migration, error) {
 	sort.Sort(byId(migrations))
 
 	return migrations, nil
-}
-
-func migrationFromFile(dir http.FileSystem, root string, info os.FileInfo) (*Migration, error) {
-	path := path.Join(root, info.Name())
-	file, err := dir.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("Error while opening %s: %s", info.Name(), err)
-	}
-	defer func() { _ = file.Close() }()
-
-	migration, err := ParseMigration(info.Name(), file)
-	if err != nil {
-		return nil, fmt.Errorf("Error while parsing %s: %s", info.Name(), err)
-	}
-	return migration, nil
 }
 
 // Migrations from a bindata asset set.
@@ -325,11 +358,14 @@ func (a AssetMigrationSource) FindMigrations() ([]*Migration, error) {
 				return nil, err
 			}
 
-			migration, err := ParseMigration(name, bytes.NewReader(file))
+			migrationData, err := ParseMigration(name, bytes.NewReader(file))
 			if err != nil {
 				return nil, err
 			}
-
+			migration := &Migration{
+				Id:   name,
+				data: migrationData,
+			}
 			migrations = append(migrations, migration)
 		}
 	}
@@ -382,11 +418,14 @@ func (p PackrMigrationSource) FindMigrations() ([]*Migration, error) {
 				return nil, err
 			}
 
-			migration, err := ParseMigration(name, bytes.NewReader(file))
+			migrationData, err := ParseMigration(name, bytes.NewReader(file))
 			if err != nil {
 				return nil, err
 			}
-
+			migration := &Migration{
+				Id:   name,
+				data: migrationData,
+			}
 			migrations = append(migrations, migration)
 		}
 	}
@@ -398,23 +437,18 @@ func (p PackrMigrationSource) FindMigrations() ([]*Migration, error) {
 }
 
 // Migration parsing
-func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
-	m := &Migration{
-		Id: id,
-	}
-
+func ParseMigration(id string, r io.ReadSeeker) (*MigrationData, error) {
 	parsed, err := sqlparse.ParseMigration(r)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing migration (%s): %s", id, err)
 	}
 
-	m.Up = parsed.UpStatements
-	m.Down = parsed.DownStatements
-
-	m.DisableTransactionUp = parsed.DisableTransactionUp
-	m.DisableTransactionDown = parsed.DisableTransactionDown
-
-	return m, nil
+	return &MigrationData{
+		Up:                     parsed.UpStatements,
+		Down:                   parsed.DownStatements,
+		DisableTransactionUp:   parsed.DisableTransactionUp,
+		DisableTransactionDown: parsed.DisableTransactionDown,
+	}, nil
 }
 
 type SqlExecutor interface {
@@ -575,7 +609,11 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	// Add missing migrations up to the last run migration.
 	// This can happen for example when merges happened.
 	if len(existingMigrations) > 0 {
-		result = append(result, ToCatchup(migrations, existingMigrations, record)...)
+		catchUp, err := ToCatchup(migrations, existingMigrations, record)
+		if err != nil {
+			return nil, nil, err
+		}
+		result = append(result, catchUp...)
 	}
 
 	// Figure out which migrations to apply
@@ -585,18 +623,21 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 		toApplyCount = max
 	}
 	for _, v := range toApply[0:toApplyCount] {
-
+		migrationData, err := v.Data()
+		if err != nil {
+			return nil, nil, err
+		}
 		if dir == Up {
 			result = append(result, &PlannedMigration{
 				Migration:          v,
-				Queries:            v.Up,
-				DisableTransaction: v.DisableTransactionUp,
+				Queries:            migrationData.Up,
+				DisableTransaction: migrationData.DisableTransactionUp,
 			})
 		} else if dir == Down {
 			result = append(result, &PlannedMigration{
 				Migration:          v,
-				Queries:            v.Down,
-				DisableTransaction: v.DisableTransactionDown,
+				Queries:            migrationData.Down,
+				DisableTransaction: migrationData.DisableTransactionDown,
 			})
 		}
 	}
@@ -683,7 +724,7 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	panic("Not possible")
 }
 
-func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) []*PlannedMigration {
+func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) ([]*PlannedMigration, error) {
 	missing := make([]*PlannedMigration, 0)
 	for _, migration := range migrations {
 		found := false
@@ -694,14 +735,18 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 			}
 		}
 		if !found && migration.Less(lastRun) {
+			migrationData, err := migration.Data()
+			if err != nil {
+				return nil, err
+			}
 			missing = append(missing, &PlannedMigration{
 				Migration:          migration,
-				Queries:            migration.Up,
-				DisableTransaction: migration.DisableTransactionUp,
+				Queries:            migrationData.Up,
+				DisableTransaction: migrationData.DisableTransactionUp,
 			})
 		}
 	}
-	return missing
+	return missing, nil
 }
 
 func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error) {
