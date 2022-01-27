@@ -1,3 +1,4 @@
+//go:build oracle
 // +build oracle
 
 package main
