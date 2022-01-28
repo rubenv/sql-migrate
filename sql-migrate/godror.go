@@ -1,3 +1,4 @@
+//go:build godror
 // +build godror
 
 // godror is another oracle driver
