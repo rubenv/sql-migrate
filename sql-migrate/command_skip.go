@@ -63,6 +63,7 @@ func SkipMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) erro
 	if err != nil {
 		return err
 	}
+	defer db.Close()
 
 	source := migrate.FileMigrationSource{
 		Dir: env.Dir,

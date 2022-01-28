@@ -54,6 +54,7 @@ func (c *RedoCommand) Run(args []string) int {
 		ui.Error(err.Error())
 		return 1
 	}
+	defer db.Close()
 
 	source := migrate.FileMigrationSource{
 		Dir: env.Dir,
