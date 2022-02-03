@@ -11,19 +11,15 @@ import (
 )
 
 var sqliteMigrations = []*Migration{
-	{
-		Id: "123",
-		data: &MigrationData{
-			Up:   []string{"CREATE TABLE people (id int)"},
-			Down: []string{"DROP TABLE people"},
-		},
+	&Migration{
+		Id:   "123",
+		Up:   []string{"CREATE TABLE people (id int)"},
+		Down: []string{"DROP TABLE people"},
 	},
-	{
-		Id: "124",
-		data: &MigrationData{
-			Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
-			Down: []string{"SELECT 0"}, // Not really supported
-		},
+	&Migration{
+		Id:   "124",
+		Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+		Down: []string{"SELECT 0"}, // Not really supported
 	},
 }
 
@@ -285,12 +281,10 @@ func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
 		Migrations: []*Migration{
 			sqliteMigrations[0],
 			sqliteMigrations[1],
-			{
-				Id: "125",
-				data: &MigrationData{
-					Up:   []string{"INSERT INTO people (id, first_name) VALUES (1, 'Test')", "SELECT fail"},
-					Down: []string{}, // Not important here
-				},
+			&Migration{
+				Id:   "125",
+				Up:   []string{"INSERT INTO people (id, first_name) VALUES (1, 'Test')", "SELECT fail"},
+				Down: []string{}, // Not important here
 			},
 		},
 	}
@@ -309,26 +303,20 @@ func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
 func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			{
-				Id: "1_create_table.sql",
-				data: &MigrationData{
-					Up:   []string{"CREATE TABLE people (id int)"},
-					Down: []string{"DROP TABLE people"},
-				},
+			&Migration{
+				Id:   "1_create_table.sql",
+				Up:   []string{"CREATE TABLE people (id int)"},
+				Down: []string{"DROP TABLE people"},
 			},
-			{
-				Id: "2_alter_table.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
-					Down: []string{"SELECT 0"}, // Not really supported
-				},
+			&Migration{
+				Id:   "2_alter_table.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			{
-				Id: "10_add_last_name.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
-					Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
-				},
+			&Migration{
+				Id:   "10_add_last_name.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
 			},
 		},
 	}
@@ -337,11 +325,9 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	c.Assert(n, Equals, 3)
 
 	migrations.Migrations = append(migrations.Migrations, &Migration{
-		Id: "11_add_middle_name.sql",
-		data: &MigrationData{
-			Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
-			Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
-		},
+		Id:   "11_add_middle_name.sql",
+		Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
 	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
@@ -360,26 +346,20 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 func (s *SqliteMigrateSuite) TestSkipMigration(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			{
-				Id: "1_create_table.sql",
-				data: &MigrationData{
-					Up:   []string{"CREATE TABLE people (id int)"},
-					Down: []string{"DROP TABLE people"},
-				},
+			&Migration{
+				Id:   "1_create_table.sql",
+				Up:   []string{"CREATE TABLE people (id int)"},
+				Down: []string{"DROP TABLE people"},
 			},
-			{
-				Id: "2_alter_table.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
-					Down: []string{"SELECT 0"}, // Not really supported
-				},
+			&Migration{
+				Id:   "2_alter_table.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			{
-				Id: "10_add_last_name.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
-					Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
-				},
+			&Migration{
+				Id:   "10_add_last_name.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
 			},
 		},
 	}
@@ -406,19 +386,15 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	down := "SELECT 1"
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			{
-				Id: "1",
-				data: &MigrationData{
-					Up:   []string{up},
-					Down: []string{down},
-				},
+			&Migration{
+				Id:   "1",
+				Up:   []string{up},
+				Down: []string{down},
 			},
-			{
-				Id: "3",
-				data: &MigrationData{
-					Up:   []string{up},
-					Down: []string{down},
-				},
+			&Migration{
+				Id:   "3",
+				Up:   []string{up},
+				Down: []string{down},
 			},
 		},
 	}
@@ -427,27 +403,21 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(n, Equals, 2)
 
 	migrations.Migrations = append(migrations.Migrations, &Migration{
-		Id: "2",
-		data: &MigrationData{
-			Up:   []string{up},
-			Down: []string{down},
-		},
+		Id:   "2",
+		Up:   []string{up},
+		Down: []string{down},
 	})
 
 	migrations.Migrations = append(migrations.Migrations, &Migration{
-		Id: "4",
-		data: &MigrationData{
-			Up:   []string{up},
-			Down: []string{down},
-		},
+		Id:   "4",
+		Up:   []string{up},
+		Down: []string{down},
 	})
 
 	migrations.Migrations = append(migrations.Migrations, &Migration{
-		Id: "5",
-		data: &MigrationData{
-			Up:   []string{up},
-			Down: []string{down},
-		},
+		Id:   "5",
+		Up:   []string{up},
+		Down: []string{down},
 	})
 
 	// apply all the missing migrations
@@ -506,26 +476,20 @@ func (s *SqliteMigrateSuite) TestLess(c *C) {
 func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplied(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			{
-				Id: "1_create_table.sql",
-				data: &MigrationData{
-					Up:   []string{"CREATE TABLE people (id int)"},
-					Down: []string{"DROP TABLE people"},
-				},
+			&Migration{
+				Id:   "1_create_table.sql",
+				Up:   []string{"CREATE TABLE people (id int)"},
+				Down: []string{"DROP TABLE people"},
 			},
-			{
-				Id: "2_alter_table.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
-					Down: []string{"SELECT 0"}, // Not really supported
-				},
+			&Migration{
+				Id:   "2_alter_table.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			{
-				Id: "10_add_last_name.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
-					Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
-				},
+			&Migration{
+				Id:   "10_add_last_name.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
 			},
 		},
 	}
@@ -536,11 +500,9 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplie
 	// Note that migration 10_add_last_name.sql is missing from the new migrations source
 	// so it is considered an "unknown" migration for the planner.
 	migrations.Migrations = append(migrations.Migrations[:2], &Migration{
-		Id: "10_add_middle_name.sql",
-		data: &MigrationData{
-			Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
-			Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
-		},
+		Id:   "10_add_middle_name.sql",
+		Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
 	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
@@ -557,26 +519,20 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplie
 func (s *SqliteMigrateSuite) TestPlanMigrationWithIgnoredUnknownDatabaseMigrationApplied(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			{
-				Id: "1_create_table.sql",
-				data: &MigrationData{
-					Up:   []string{"CREATE TABLE people (id int)"},
-					Down: []string{"DROP TABLE people"},
-				},
+			&Migration{
+				Id:   "1_create_table.sql",
+				Up:   []string{"CREATE TABLE people (id int)"},
+				Down: []string{"DROP TABLE people"},
 			},
-			{
-				Id: "2_alter_table.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
-					Down: []string{"SELECT 0"}, // Not really supported
-				},
+			&Migration{
+				Id:   "2_alter_table.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			{
-				Id: "10_add_last_name.sql",
-				data: &MigrationData{
-					Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
-					Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
-				},
+			&Migration{
+				Id:   "10_add_last_name.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
 			},
 		},
 	}
@@ -588,11 +544,9 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithIgnoredUnknownDatabaseMigratio
 	// Note that migration 10_add_last_name.sql is missing from the new migrations source
 	// so it is considered an "unknown" migration for the planner.
 	migrations.Migrations = append(migrations.Migrations[:2], &Migration{
-		Id: "10_add_middle_name.sql",
-		data: &MigrationData{
-			Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
-			Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
-		},
+		Id:   "10_add_middle_name.sql",
+		Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
 	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
@@ -617,19 +571,15 @@ func (s *SqliteMigrateSuite) TestExecWithUnknownMigrationInDatabase(c *C) {
 
 	// Then create a new migration source with one of the migrations missing
 	var newSqliteMigrations = []*Migration{
-		{
-			Id: "124_other",
-			data: &MigrationData{
-				Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
-				Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
-			},
+		&Migration{
+			Id:   "124_other",
+			Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+			Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 		},
-		{
-			Id: "125",
-			data: &MigrationData{
-				Up:   []string{"ALTER TABLE people ADD COLUMN age int"},
-				Down: []string{"ALTER TABLE people DROP COLUMN age"},
-			},
+		&Migration{
+			Id:   "125",
+			Up:   []string{"ALTER TABLE people ADD COLUMN age int"},
+			Down: []string{"ALTER TABLE people DROP COLUMN age"},
 		},
 	}
 	migrations = &MemoryMigrationSource{

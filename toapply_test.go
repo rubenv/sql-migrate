@@ -1,15 +1,14 @@
 package migrate
 
 import (
-	"sort"
-
 	. "gopkg.in/check.v1"
+	"sort"
 )
 
 var toapplyMigrations = []*Migration{
-	{Id: "abc"},
-	{Id: "cde"},
-	{Id: "efg"},
+	&Migration{Id: "abc", Up: nil, Down: nil},
+	&Migration{Id: "cde", Up: nil, Down: nil},
+	&Migration{Id: "efg", Up: nil, Down: nil},
 }
 
 type ToApplyMigrateSuite struct {
@@ -80,11 +79,11 @@ func (s *ToApplyMigrateSuite) TestDownAll(c *C) {
 
 func (s *ToApplyMigrateSuite) TestAlphaNumericMigrations(c *C) {
 	var migrations = byId([]*Migration{
-		{Id: "10_abc"},
-		{Id: "1_abc"},
-		{Id: "efg"},
-		{Id: "2_cde"},
-		{Id: "35_cde"},
+		&Migration{Id: "10_abc", Up: nil, Down: nil},
+		&Migration{Id: "1_abc", Up: nil, Down: nil},
+		&Migration{Id: "efg", Up: nil, Down: nil},
+		&Migration{Id: "2_cde", Up: nil, Down: nil},
+		&Migration{Id: "35_cde", Up: nil, Down: nil},
 	})
 
 	sort.Sort(migrations)
