@@ -665,3 +665,29 @@ func (s *SqliteMigrateSuite) TestGetMigrationDbMapWithDisableCreateTable(c *C) {
 	_, err := migSet.getMigrationDbMap(s.Db, "postgres")
 	c.Assert(err, IsNil)
 }
+
+func (s *SqliteMigrateSuite) TestFileMigrateWithLazyLoad(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	SetLazyLoad(true)
+	migrationsNotLoaded, err := migrations.FindMigrations()
+	c.Assert(err, IsNil)
+	for _, migration := range migrationsNotLoaded {
+		c.Assert(migration.DisableTransactionUp, Equals, false)
+		c.Assert(migration.DisableTransactionDown, Equals, false)
+		c.Assert(len(migration.Up), Equals, 0)
+		c.Assert(len(migration.Down), Equals, 0)
+	}
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+	SetLazyLoad(false)
+}

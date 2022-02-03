@@ -39,6 +39,8 @@ type MigrationSet struct {
 	IgnoreUnknown bool
 	// DisableCreateTable disable the creation of the migration table
 	DisableCreateTable bool
+	// LazyLoad enable migration file to be loaded only when needed.
+	LazyLoad bool
 }
 
 var migSet = MigrationSet{}
@@ -121,6 +123,17 @@ func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
 }
 
+// SetLazyLoad sets the boolean to enable migration file to be loaded only when needed.
+func SetLazyLoad(v bool) {
+	migSet.LazyLoad = v
+}
+
+type migrationFile struct {
+	dir      http.FileSystem
+	root     string
+	baseName string
+}
+
 type Migration struct {
 	Id   string
 	Up   []string
@@ -128,6 +141,9 @@ type Migration struct {
 
 	DisableTransactionUp   bool
 	DisableTransactionDown bool
+
+	// lazyLoadFile is information of migration file, which is used to load migration file later if not nil.
+	lazyLoadFile *migrationFile
 }
 
 func (m Migration) Less(other *Migration) bool {
@@ -158,6 +174,31 @@ func (m Migration) VersionInt() int64 {
 		panic(fmt.Sprintf("Could not parse %q into int64: %s", v, err))
 	}
 	return value
+}
+
+// Load parses migration file if not yet
+func (m *Migration) Load() error {
+	if m.lazyLoadFile == nil {
+		return nil
+	}
+	root := m.lazyLoadFile.root
+	name := m.lazyLoadFile.baseName
+	file, err := m.lazyLoadFile.dir.Open(path.Join(root, name))
+	if err != nil {
+		return fmt.Errorf("Error while opening %s: %s", name, err)
+	}
+	defer func() { _ = file.Close() }()
+
+	parsed, err := sqlparse.ParseMigration(file)
+	if err != nil {
+		return fmt.Errorf("Error parsing migration (%s): %s", m.Id, err)
+	}
+	m.Up = parsed.UpStatements
+	m.Down = parsed.DownStatements
+	m.DisableTransactionUp = parsed.DisableTransactionUp
+	m.DisableTransactionDown = parsed.DisableTransactionDown
+	m.lazyLoadFile = nil
+	return nil
 }
 
 type PlannedMigration struct {
@@ -266,12 +307,23 @@ func findMigrations(dir http.FileSystem, root string) ([]*Migration, error) {
 
 	for _, info := range files {
 		if strings.HasSuffix(info.Name(), ".sql") {
-			migration, err := migrationFromFile(dir, root, info)
-			if err != nil {
-				return nil, err
+			if migSet.LazyLoad {
+				migration := &Migration{
+					Id: info.Name(),
+					lazyLoadFile: &migrationFile{
+						dir:      dir,
+						root:     root,
+						baseName: info.Name(),
+					},
+				}
+				migrations = append(migrations, migration)
+			} else {
+				migration, err := migrationFromFile(dir, root, info)
+				if err != nil {
+					return nil, err
+				}
+				migrations = append(migrations, migration)
 			}
-
-			migrations = append(migrations, migration)
 		}
 	}
 
@@ -575,7 +627,11 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	// Add missing migrations up to the last run migration.
 	// This can happen for example when merges happened.
 	if len(existingMigrations) > 0 {
-		result = append(result, ToCatchup(migrations, existingMigrations, record)...)
+		catchUp, err := ToCatchup(migrations, existingMigrations, record)
+		if err != nil {
+			return nil, nil, err
+		}
+		result = append(result, catchUp...)
 	}
 
 	// Figure out which migrations to apply
@@ -585,6 +641,10 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 		toApplyCount = max
 	}
 	for _, v := range toApply[0:toApplyCount] {
+		err = v.Load()
+		if err != nil {
+			return nil, nil, err
+		}
 
 		if dir == Up {
 			result = append(result, &PlannedMigration{
@@ -683,7 +743,7 @@ func ToApply(migrations []*Migration, current string, direction MigrationDirecti
 	panic("Not possible")
 }
 
-func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) []*PlannedMigration {
+func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) ([]*PlannedMigration, error) {
 	missing := make([]*PlannedMigration, 0)
 	for _, migration := range migrations {
 		found := false
@@ -694,6 +754,10 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 			}
 		}
 		if !found && migration.Less(lastRun) {
+			err := migration.Load()
+			if err != nil {
+				return nil, err
+			}
 			missing = append(missing, &PlannedMigration{
 				Migration:          migration,
 				Queries:            migration.Up,
@@ -701,7 +765,7 @@ func ToCatchup(migrations, existingMigrations []*Migration, lastRun *Migration) 
 			})
 		}
 	}
-	return missing
+	return missing, nil
 }
 
 func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error) {
