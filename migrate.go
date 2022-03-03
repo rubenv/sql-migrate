@@ -543,24 +543,28 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 
 	// Sort migrations that have been run by Id.
 	var existingMigrations []*Migration
-	for _, migrationRecord := range migrationRecords {
-		existingMigrations = append(existingMigrations, &Migration{
-			Id: migrationRecord.Id,
-		})
+	migrationsSearch := make(map[string]struct{})
+	for _, migration := range migrations {
+		migrationsSearch[migration.Id] = struct{}{}
 	}
+
+	for _, migrationRecord := range migrationRecords {
+		_, ok := migrationsSearch[migrationRecord.Id]
+
+		if !ms.IgnoreUnknown || ok {
+			existingMigrations = append(existingMigrations, &Migration{
+				Id: migrationRecord.Id,
+			})
+		}
+	}
+
 	sort.Sort(byId(existingMigrations))
 
 	// Make sure all migrations in the database are among the found migrations which
 	// are to be applied.
-	if !ms.IgnoreUnknown {
-		migrationsSearch := make(map[string]struct{})
-		for _, migration := range migrations {
-			migrationsSearch[migration.Id] = struct{}{}
-		}
-		for _, existingMigration := range existingMigrations {
-			if _, ok := migrationsSearch[existingMigration.Id]; !ok {
-				return nil, nil, newPlanError(existingMigration, "unknown migration in database")
-			}
+	for _, existingMigration := range existingMigrations {
+		if _, ok := migrationsSearch[existingMigration.Id]; !ok {
+			return nil, nil, newPlanError(existingMigration, "unknown migration in database")
 		}
 	}
 

@@ -665,3 +665,25 @@ func (s *SqliteMigrateSuite) TestGetMigrationDbMapWithDisableCreateTable(c *C) {
 	_, err := migSet.getMigrationDbMap(s.Db, "postgres")
 	c.Assert(err, IsNil)
 }
+
+func (s *SqliteMigrateSuite) TestMigrateWith2Folders(c *C) {
+	SetIgnoreUnknown(true)
+
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	migrationsOther := &FileMigrationSource{
+		Dir: "test-migrations-other",
+	}
+
+	// Executes all migrate Down
+	_, err := ExecMax(s.Db, "sqlite3", migrations, Up, 1)
+	c.Assert(err, IsNil)
+
+	migrationsOtherPlanned, _, err := PlanMigration(s.Db, "sqlite3", migrationsOther, Up, 1)
+	c.Assert(len(migrationsOtherPlanned), Equals, 1)
+
+	// Make sure we are not breaking other tests as this is globaly set
+	SetIgnoreUnknown(false)
+}
