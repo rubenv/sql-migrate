@@ -22,7 +22,7 @@ Using [modl](https://github.com/jmoiron/modl)? Check out [modl-migrate](https://
 To install the library and command line program, use the following:
 
 ```bash
-go get -v github.com/rubenv/sql-migrate/...
+go install github.com/rubenv/sql-migrate/...@latest
 ```
 
 ## Usage
