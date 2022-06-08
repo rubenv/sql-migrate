@@ -1,10 +1,12 @@
 package main
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
 
 	"github.com/mitchellh/cli"
+	migrate "github.com/rubenv/sql-migrate"
 )
 
 func main() {
@@ -39,7 +41,7 @@ func realMain() int {
 			},
 		},
 		HelpFunc: cli.BasicHelpFunc("sql-migrate"),
-		Version:  "1.0.0",
+		Version:  migrate.GetVersion(),
 	}
 
 	exitCode, err := cli.Run()
