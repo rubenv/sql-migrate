@@ -6,7 +6,6 @@ import (
 	"os"
 
 	"github.com/mitchellh/cli"
-	migrate "github.com/rubenv/sql-migrate"
 )
 
 func main() {
@@ -41,7 +40,7 @@ func realMain() int {
 			},
 		},
 		HelpFunc: cli.BasicHelpFunc("sql-migrate"),
-		Version:  migrate.GetVersion(),
+		Version:  GetVersion(),
 	}
 
 	exitCode, err := cli.Run()
