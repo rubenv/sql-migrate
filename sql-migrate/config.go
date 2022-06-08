@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"runtime/debug"
 
 	"github.com/go-gorp/gorp/v3"
 	migrate "github.com/rubenv/sql-migrate"
@@ -102,4 +103,12 @@ func GetConnection(env *Environment) (*sql.DB, string, error) {
 	}
 
 	return db, env.Dialect, nil
+}
+
+// GetVersion returns the version.
+func GetVersion() string {
+	if buildInfo, ok := debug.ReadBuildInfo(); ok && buildInfo.Main.Version != "(devel)" {
+		return buildInfo.Main.Version
+	}
+	return "dev"
 }
