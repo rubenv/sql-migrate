@@ -4,8 +4,6 @@
 
 [![Build Status](https://travis-ci.org/rubenv/sql-migrate.svg?branch=master)](https://travis-ci.org/rubenv/sql-migrate) [![GoDoc](https://godoc.org/github.com/rubenv/sql-migrate?status.svg)](https://godoc.org/github.com/rubenv/sql-migrate)
 
-Using [modl](https://github.com/jmoiron/modl)? Check out [modl-migrate](https://github.com/rubenv/modl-migrate).
-
 ## Features
 
 * Usable as a CLI tool or as a library
