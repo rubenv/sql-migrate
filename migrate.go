@@ -525,7 +525,7 @@ func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationD
 	return migSet.PlanMigration(db, dialect, m, dir, max, version)
 }
 
-func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, versionInt int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap, err := ms.getMigrationDbMap(db, dialect)
 	if err != nil {
 		return nil, nil, err
@@ -583,17 +583,17 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	toApply := ToApply(migrations, record.Id, dir)
 	toApplyCount := len(toApply)
 
-	if versionInt > 0 {
+	if version > 0 {
 		i := 0
 		for i < len(toApply) {
-			if toApply[i].VersionInt() == versionInt {
+			if toApply[i].VersionInt() == version {
 				toApplyCount = i + 1
 				break
 			}
 			i++
 		}
 		if i == len(toApply) {
-			return nil, nil, newPlanError(&Migration{}, fmt.Errorf("unknown migration with id %d in database", versionInt).Error())
+			return nil, nil, newPlanError(&Migration{}, fmt.Errorf("unknown migration with version id %d in database", version).Error())
 		}
 	} else if max > 0 && max < toApplyCount {
 		toApplyCount = max
