@@ -21,7 +21,7 @@ Options:
   -config=dbconfig.yml   Configuration file to use.
   -env="development"     Environment.
   -limit=1               Limit the number of migrations (0 = unlimited).
-  -version               Run migrate up to a specific version, eg: the version number of migration 1_initial.sql is 1.
+  -version               Run migrate down to a specific version, eg: the version number of migration 1_initial.sql is 1.
   -dryrun                Don't apply migrations, just print them.
 
 `
