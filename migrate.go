@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/go-gorp/gorp/v3"
+
 	"github.com/rubenv/sql-migrate/sqlparse"
 )
 
@@ -427,12 +428,12 @@ type SqlExecutor interface {
 //
 // Returns the number of applied migrations.
 func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ExecMax(db, dialect, m, dir, 0)
+	return ExecMax(db, dialect, m, dir, 0, 0)
 }
 
 // Returns the number of applied migrations.
 func (ms MigrationSet) Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ms.ExecMax(db, dialect, m, dir, 0)
+	return ms.ExecMax(db, dialect, m, dir, 0, 0)
 }
 
 // Execute a set of migrations
@@ -440,13 +441,13 @@ func (ms MigrationSet) Exec(db *sql.DB, dialect string, m MigrationSource, dir M
 // Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
 //
 // Returns the number of applied migrations.
-func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	return migSet.ExecMax(db, dialect, m, dir, max)
+func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) (int, error) {
+	return migSet.ExecMax(db, dialect, m, dir, max, version)
 }
 
 // Returns the number of applied migrations.
-func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max)
+func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) (int, error) {
+	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max, version)
 	if err != nil {
 		return 0, err
 	}
@@ -520,11 +521,11 @@ func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, di
 }
 
 // Plan a migration.
-func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
-	return migSet.PlanMigration(db, dialect, m, dir, max)
+func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+	return migSet.PlanMigration(db, dialect, m, dir, max, version)
 }
 
-func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
+func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, versionInt int64) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap, err := ms.getMigrationDbMap(db, dialect)
 	if err != nil {
 		return nil, nil, err
@@ -581,7 +582,20 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	// Figure out which migrations to apply
 	toApply := ToApply(migrations, record.Id, dir)
 	toApplyCount := len(toApply)
-	if max > 0 && max < toApplyCount {
+
+	if versionInt > 0 {
+		i := 0
+		for i < len(toApply) {
+			if toApply[i].VersionInt() == versionInt {
+				toApplyCount = i + 1
+				break
+			}
+			i++
+		}
+		if i == len(toApply) {
+			return nil, nil, newPlanError(&Migration{}, fmt.Errorf("unknown migration with id %d in database", versionInt).Error())
+		}
+	} else if max > 0 && max < toApplyCount {
 		toApplyCount = max
 	}
 	for _, v := range toApply[0:toApplyCount] {
@@ -610,7 +624,7 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 //
 // Returns the number of skipped migrations.
 func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max)
+	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max, 0)
 	if err != nil {
 		return 0, err
 	}

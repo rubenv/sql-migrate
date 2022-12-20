@@ -2,11 +2,12 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	migrate "github.com/rubenv/sql-migrate"
 )
 
-func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) error {
+func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, version string) error {
 	env, err := GetEnvironment()
 	if err != nil {
 		return fmt.Errorf("Could not parse config: %s", err)
@@ -22,8 +23,15 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 		Dir: env.Dir,
 	}
 
+	version = strings.TrimSpace(version)
+	var targetVersionId int64 = 0
+	if len(version) > 0 {
+		tempMigration := migrate.Migration{Id: version}
+		targetVersionId = tempMigration.VersionInt()
+	}
+
 	if dryrun {
-		migrations, _, err := migrate.PlanMigration(db, dialect, source, dir, limit)
+		migrations, _, err := migrate.PlanMigration(db, dialect, source, dir, limit, targetVersionId)
 		if err != nil {
 			return fmt.Errorf("Cannot plan migration: %s", err)
 		}
@@ -32,7 +40,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int) err
 			PrintMigration(m, dir)
 		}
 	} else {
-		n, err := migrate.ExecMax(db, dialect, source, dir, limit)
+		n, err := migrate.ExecMax(db, dialect, source, dir, limit, targetVersionId)
 		if err != nil {
 			return fmt.Errorf("Migration failed: %s", err)
 		}

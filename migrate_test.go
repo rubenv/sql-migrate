@@ -11,12 +11,12 @@ import (
 )
 
 var sqliteMigrations = []*Migration{
-	&Migration{
+	{
 		Id:   "123",
 		Up:   []string{"CREATE TABLE people (id int)"},
 		Down: []string{"DROP TABLE people"},
 	},
-	&Migration{
+	{
 		Id:   "124",
 		Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
 		Down: []string{"SELECT 0"}, // Not really supported
@@ -199,13 +199,53 @@ func (s *SqliteMigrateSuite) TestMigrateMax(c *C) {
 	}
 
 	// Executes one migration
-	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 1)
+	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 1, 0)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
 	id, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
 	c.Assert(err, IsNil)
 	c.Assert(id, Equals, int64(0))
+}
+
+func (s *SqliteMigrateSuite) TestMigrateVersionInt(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Executes to migration with id 1
+	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 0, 1)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 1)
+
+	id, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(0))
+}
+
+func (s *SqliteMigrateSuite) TestMigrateVersionInt2(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Executes to migration with id 1
+	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 0, 2)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	id, err := s.DbMap.SelectInt("SELECT COUNT(*) FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+}
+
+func (s *SqliteMigrateSuite) TestMigrateVersionIntFailed(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Executes to migration with id 3
+	_, err := ExecMax(s.Db, "sqlite3", migrations, Up, 0, 3)
+	c.Assert(err, NotNil)
 }
 
 func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
@@ -223,7 +263,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(id, Equals, int64(1))
 
 	// Undo the last one
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
+	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1, 0)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -233,7 +273,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(id, Equals, int64(0))
 
 	// Remove the table.
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
+	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1, 0)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -242,7 +282,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(err, Not(IsNil))
 
 	// Nothing left to do.
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
+	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1, 0)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
@@ -281,7 +321,7 @@ func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
 		Migrations: []*Migration{
 			sqliteMigrations[0],
 			sqliteMigrations[1],
-			&Migration{
+			{
 				Id:   "125",
 				Up:   []string{"INSERT INTO people (id, first_name) VALUES (1, 'Test')", "SELECT fail"},
 				Down: []string{}, // Not important here
@@ -303,17 +343,17 @@ func (s *SqliteMigrateSuite) TestMigrateTransaction(c *C) {
 func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			&Migration{
+			{
 				Id:   "1_create_table.sql",
 				Up:   []string{"CREATE TABLE people (id int)"},
 				Down: []string{"DROP TABLE people"},
 			},
-			&Migration{
+			{
 				Id:   "2_alter_table.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
 				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			&Migration{
+			{
 				Id:   "10_add_last_name.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
 				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
@@ -330,12 +370,12 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
-	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 1)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[3])
 
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0)
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[2])
@@ -346,17 +386,17 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 func (s *SqliteMigrateSuite) TestSkipMigration(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			&Migration{
+			{
 				Id:   "1_create_table.sql",
 				Up:   []string{"CREATE TABLE people (id int)"},
 				Down: []string{"DROP TABLE people"},
 			},
-			&Migration{
+			{
 				Id:   "2_alter_table.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
 				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			&Migration{
+			{
 				Id:   "10_add_last_name.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
 				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
@@ -386,12 +426,12 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	down := "SELECT 1"
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			&Migration{
+			{
 				Id:   "1",
 				Up:   []string{up},
 				Down: []string{down},
 			},
-			&Migration{
+			{
 				Id:   "3",
 				Up:   []string{up},
 				Down: []string{down},
@@ -421,7 +461,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	})
 
 	// apply all the missing migrations
-	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -432,7 +472,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, up)
 
 	// first catch up to current target state 123, then migrate down 1 step to 12
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 1)
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 1, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 2)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -441,7 +481,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[1].Queries[0], Equals, down)
 
 	// first catch up to current target state 123, then migrate down 2 steps to 1
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 2)
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 2, 0)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -476,17 +516,17 @@ func (s *SqliteMigrateSuite) TestLess(c *C) {
 func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplied(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			&Migration{
+			{
 				Id:   "1_create_table.sql",
 				Up:   []string{"CREATE TABLE people (id int)"},
 				Down: []string{"DROP TABLE people"},
 			},
-			&Migration{
+			{
 				Id:   "2_alter_table.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
 				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			&Migration{
+			{
 				Id:   "10_add_last_name.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
 				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
@@ -505,12 +545,12 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplie
 		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
 	c.Assert(err, NotNil, Commentf("Up migrations should not have been applied when there "+
 		"is an unknown migration in the database"))
 	c.Assert(err, FitsTypeOf, &PlanError{})
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, 0)
 	c.Assert(err, NotNil, Commentf("Down migrations should not have been applied when there "+
 		"is an unknown migration in the database"))
 	c.Assert(err, FitsTypeOf, &PlanError{})
@@ -519,17 +559,17 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplie
 func (s *SqliteMigrateSuite) TestPlanMigrationWithIgnoredUnknownDatabaseMigrationApplied(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
-			&Migration{
+			{
 				Id:   "1_create_table.sql",
 				Up:   []string{"CREATE TABLE people (id int)"},
 				Down: []string{"DROP TABLE people"},
 			},
-			&Migration{
+			{
 				Id:   "2_alter_table.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
 				Down: []string{"SELECT 0"}, // Not really supported
 			},
-			&Migration{
+			{
 				Id:   "10_add_last_name.sql",
 				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
 				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
@@ -549,10 +589,10 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithIgnoredUnknownDatabaseMigratio
 		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
 	c.Assert(err, IsNil)
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, 0)
 	c.Assert(err, IsNil)
 	SetIgnoreUnknown(false) // Make sure we are not breaking other tests as this is globaly set
 }
@@ -571,12 +611,12 @@ func (s *SqliteMigrateSuite) TestExecWithUnknownMigrationInDatabase(c *C) {
 
 	// Then create a new migration source with one of the migrations missing
 	var newSqliteMigrations = []*Migration{
-		&Migration{
+		{
 			Id:   "124_other",
 			Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
 			Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 		},
-		&Migration{
+		{
 			Id:   "125",
 			Up:   []string{"ALTER TABLE people ADD COLUMN age int"},
 			Down: []string{"ALTER TABLE people DROP COLUMN age"},

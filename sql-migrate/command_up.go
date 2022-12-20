@@ -21,6 +21,7 @@ Options:
   -config=dbconfig.yml   Configuration file to use.
   -env="development"     Environment.
   -limit=0               Limit the number of migrations (0 = unlimited).
+  -version               Run migrate up to a specific version, eg: 20221102092308-create-users or 20221102092308.
   -dryrun                Don't apply migrations, just print them.
 
 `
@@ -33,11 +34,13 @@ func (c *UpCommand) Synopsis() string {
 
 func (c *UpCommand) Run(args []string) int {
 	var limit int
+	var version string
 	var dryrun bool
 
 	cmdFlags := flag.NewFlagSet("up", flag.ContinueOnError)
 	cmdFlags.Usage = func() { ui.Output(c.Help()) }
 	cmdFlags.IntVar(&limit, "limit", 0, "Max number of migrations to apply.")
+	cmdFlags.StringVar(&version, "version", "", "Migrate up to a specific version.")
 	cmdFlags.BoolVar(&dryrun, "dryrun", false, "Don't apply migrations, just print them.")
 	ConfigFlags(cmdFlags)
 
@@ -45,7 +48,7 @@ func (c *UpCommand) Run(args []string) int {
 		return 1
 	}
 
-	err := ApplyMigrations(migrate.Up, dryrun, limit)
+	err := ApplyMigrations(migrate.Up, dryrun, limit, version)
 	if err != nil {
 		ui.Error(err.Error())
 		return 1
