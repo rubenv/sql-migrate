@@ -463,7 +463,7 @@ func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, di
 	if err != nil {
 		return 0, err
 	}
-	return ms.ApplyMigrations(dir, migrations, dbMap)
+	return ms.applyMigrations(dir, migrations, dbMap)
 }
 
 func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
@@ -471,10 +471,10 @@ func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource
 	if err != nil {
 		return 0, err
 	}
-	return ms.ApplyMigrations(dir, migrations, dbMap)
+	return ms.applyMigrations(dir, migrations, dbMap)
 }
 
-func (ms MigrationSet) ApplyMigrations(dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
+func (ms MigrationSet) applyMigrations(dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
 	applied := 0
 	for _, migration := range migrations {
 		var executor SqlExecutor
