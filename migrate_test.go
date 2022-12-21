@@ -199,7 +199,7 @@ func (s *SqliteMigrateSuite) TestMigrateMax(c *C) {
 	}
 
 	// Executes one migration
-	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 1, 0)
+	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -213,8 +213,8 @@ func (s *SqliteMigrateSuite) TestMigrateVersionInt(c *C) {
 		Dir: "test-migrations",
 	}
 
-	// Executes to migration with id 1
-	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 0, 1)
+	// Executes migration with target version 1
+	n, err := ExecVersion(s.Db, "sqlite3", migrations, Up, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -228,8 +228,8 @@ func (s *SqliteMigrateSuite) TestMigrateVersionInt2(c *C) {
 		Dir: "test-migrations",
 	}
 
-	// Executes to migration with id 1
-	n, err := ExecMax(s.Db, "sqlite3", migrations, Up, 0, 2)
+	// Executes migration with target version 2
+	n, err := ExecVersion(s.Db, "sqlite3", migrations, Up, 2)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 2)
 
@@ -243,8 +243,18 @@ func (s *SqliteMigrateSuite) TestMigrateVersionIntFailed(c *C) {
 		Dir: "test-migrations",
 	}
 
-	// Executes to migration with id 3
-	_, err := ExecMax(s.Db, "sqlite3", migrations, Up, 0, 3)
+	// Executes migration with not existed version 3
+	_, err := ExecVersion(s.Db, "sqlite3", migrations, Up, 3)
+	c.Assert(err, NotNil)
+}
+
+func (s *SqliteMigrateSuite) TestMigrateVersionIntFailed2(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Executes migration with invalid version -1
+	_, err := ExecVersion(s.Db, "sqlite3", migrations, Up, -1)
 	c.Assert(err, NotNil)
 }
 
@@ -263,7 +273,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(id, Equals, int64(1))
 
 	// Undo the last one
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1, 0)
+	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -273,7 +283,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(id, Equals, int64(0))
 
 	// Remove the table.
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1, 0)
+	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 1)
 
@@ -282,7 +292,7 @@ func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	c.Assert(err, Not(IsNil))
 
 	// Nothing left to do.
-	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1, 0)
+	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
 }
@@ -370,12 +380,12 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
-	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0, -1)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 1)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[3])
 
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, 0)
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, -1)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[2])
@@ -461,7 +471,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	})
 
 	// apply all the missing migrations
-	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0, -1)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -472,7 +482,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, up)
 
 	// first catch up to current target state 123, then migrate down 1 step to 12
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 1, 0)
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 1, -1)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 2)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -481,7 +491,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[1].Queries[0], Equals, down)
 
 	// first catch up to current target state 123, then migrate down 2 steps to 1
-	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 2, 0)
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 2, -1)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
@@ -545,12 +555,12 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplie
 		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0, -1)
 	c.Assert(err, NotNil, Commentf("Up migrations should not have been applied when there "+
 		"is an unknown migration in the database"))
 	c.Assert(err, FitsTypeOf, &PlanError{})
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, -1)
 	c.Assert(err, NotNil, Commentf("Down migrations should not have been applied when there "+
 		"is an unknown migration in the database"))
 	c.Assert(err, FitsTypeOf, &PlanError{})
@@ -589,10 +599,10 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithIgnoredUnknownDatabaseMigratio
 		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
 	})
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0, -1)
 	c.Assert(err, IsNil)
 
-	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, 0)
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, -1)
 	c.Assert(err, IsNil)
 	SetIgnoreUnknown(false) // Make sure we are not breaking other tests as this is globaly set
 }

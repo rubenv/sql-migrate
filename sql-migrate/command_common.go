@@ -32,7 +32,15 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, ver
 			PrintMigration(m, dir)
 		}
 	} else {
-		n, err := migrate.ExecMax(db, dialect, source, dir, limit, version)
+		var n int
+		var err error
+
+		if version > 0 {
+			n, err = migrate.ExecVersion(db, dialect, source, dir, version)
+		} else {
+			n, err = migrate.ExecMax(db, dialect, source, dir, limit)
+		}
+
 		if err != nil {
 			return fmt.Errorf("Migration failed: %s", err)
 		}

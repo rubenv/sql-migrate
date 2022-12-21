@@ -60,7 +60,7 @@ func (c *RedoCommand) Run(args []string) int {
 		Dir: env.Dir,
 	}
 
-	migrations, _, err := migrate.PlanMigration(db, dialect, source, migrate.Down, 1, 0)
+	migrations, _, err := migrate.PlanMigration(db, dialect, source, migrate.Down, 1, -1)
 	if err != nil {
 		ui.Error(fmt.Sprintf("Migration (redo) failed: %v", err))
 		return 1
@@ -73,13 +73,13 @@ func (c *RedoCommand) Run(args []string) int {
 		PrintMigration(migrations[0], migrate.Down)
 		PrintMigration(migrations[0], migrate.Up)
 	} else {
-		_, err := migrate.ExecMax(db, dialect, source, migrate.Down, 1, 0)
+		_, err := migrate.ExecMax(db, dialect, source, migrate.Down, 1)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Migration (down) failed: %s", err))
 			return 1
 		}
 
-		_, err = migrate.ExecMax(db, dialect, source, migrate.Up, 1, 0)
+		_, err = migrate.ExecMax(db, dialect, source, migrate.Up, 1)
 		if err != nil {
 			ui.Error(fmt.Sprintf("Migration (up) failed: %s", err))
 			return 1

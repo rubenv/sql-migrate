@@ -428,12 +428,12 @@ type SqlExecutor interface {
 //
 // Returns the number of applied migrations.
 func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ExecMax(db, dialect, m, dir, 0, 0)
+	return ExecMax(db, dialect, m, dir, 0)
 }
 
 // Returns the number of applied migrations.
 func (ms MigrationSet) Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ms.ExecMax(db, dialect, m, dir, 0, 0)
+	return ms.ExecMax(db, dialect, m, dir, 0)
 }
 
 // Execute a set of migrations
@@ -441,21 +441,44 @@ func (ms MigrationSet) Exec(db *sql.DB, dialect string, m MigrationSource, dir M
 // Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
 //
 // Returns the number of applied migrations.
-func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) (int, error) {
-	return migSet.ExecMax(db, dialect, m, dir, max, version)
+func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+	return migSet.ExecMax(db, dialect, m, dir, max)
+}
+
+// Execute a set of migrations
+//
+// Will apply at the target `version` of migration. Cannot be a negative value.
+//
+// Returns the number of applied migrations.
+func ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
+	if version < 0 {
+		return 0, fmt.Errorf("target version %d should not be negative", version)
+	}
+	return migSet.ExecVersion(db, dialect, m, dir, version)
 }
 
 // Returns the number of applied migrations.
-func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) (int, error) {
-	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max, version)
+func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max, -1)
 	if err != nil {
 		return 0, err
 	}
+	return ms.ApplyMigrations(dir, migrations, dbMap)
+}
 
-	// Apply migrations
+func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
+	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, 0, version)
+	if err != nil {
+		return 0, err
+	}
+	return ms.ApplyMigrations(dir, migrations, dbMap)
+}
+
+func (ms MigrationSet) ApplyMigrations(dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
 	applied := 0
 	for _, migration := range migrations {
 		var executor SqlExecutor
+		var err error
 
 		if migration.DisableTransaction {
 			executor = dbMap
@@ -583,7 +606,7 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	toApply := ToApply(migrations, record.Id, dir)
 	toApplyCount := len(toApply)
 
-	if version > 0 {
+	if version >= 0 {
 		targetIndex := 0
 		for targetIndex < len(toApply) {
 			tempVersion := toApply[targetIndex].VersionInt()
@@ -628,7 +651,7 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 //
 // Returns the number of skipped migrations.
 func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max, 0)
+	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max, -1)
 	if err != nil {
 		return 0, err
 	}
