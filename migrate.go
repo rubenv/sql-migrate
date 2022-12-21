@@ -584,15 +584,19 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 	toApplyCount := len(toApply)
 
 	if version > 0 {
-		i := 0
-		for i < len(toApply) {
-			if toApply[i].VersionInt() == version {
-				toApplyCount = i + 1
+		targetIndex := 0
+		for targetIndex < len(toApply) {
+			tempVersion := toApply[targetIndex].VersionInt()
+			if dir == Up && tempVersion > version || dir == Down && tempVersion < version {
+				return nil, nil, newPlanError(&Migration{}, fmt.Errorf("unknown migration with version id %d in database", version).Error())
+			}
+			if tempVersion == version {
+				toApplyCount = targetIndex + 1
 				break
 			}
-			i++
+			targetIndex++
 		}
-		if i == len(toApply) {
+		if targetIndex == len(toApply) {
 			return nil, nil, newPlanError(&Migration{}, fmt.Errorf("unknown migration with version id %d in database", version).Error())
 		}
 	} else if max > 0 && max < toApplyCount {
