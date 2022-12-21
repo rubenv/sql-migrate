@@ -243,7 +243,7 @@ func (s *SqliteMigrateSuite) TestMigrateVersionIntFailed(c *C) {
 		Dir: "test-migrations",
 	}
 
-	// Executes migration with not existed version 3
+	// Executes migration with not existing version 3
 	_, err := ExecVersion(s.Db, "sqlite3", migrations, Up, 3)
 	c.Assert(err, NotNil)
 }
@@ -386,6 +386,49 @@ func (s *SqliteMigrateSuite) TestPlanMigration(c *C) {
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[3])
 
 	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, -1)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 3)
+	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[2])
+	c.Assert(plannedMigrations[1].Migration, Equals, migrations.Migrations[1])
+	c.Assert(plannedMigrations[2].Migration, Equals, migrations.Migrations[0])
+}
+
+func (s *SqliteMigrateSuite) TestPlanMigrationWithVersion(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			{
+				Id:   "1_create_table.sql",
+				Up:   []string{"CREATE TABLE people (id int)"},
+				Down: []string{"DROP TABLE people"},
+			},
+			{
+				Id:   "2_alter_table.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down: []string{"SELECT 0"}, // Not really supported
+			},
+			{
+				Id:   "10_add_last_name.sql",
+				Up:   []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down: []string{"ALTER TABLE people DROP COLUMN last_name"},
+			},
+		},
+	}
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 3)
+
+	migrations.Migrations = append(migrations.Migrations, &Migration{
+		Id:   "11_add_middle_name.sql",
+		Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
+		Down: []string{"ALTER TABLE people DROP COLUMN middle_name"},
+	})
+
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Up, 0, 11)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 1)
+	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[3])
+
+	plannedMigrations, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0, 1)
 	c.Assert(err, IsNil)
 	c.Assert(plannedMigrations, HasLen, 3)
 	c.Assert(plannedMigrations[0].Migration, Equals, migrations.Migrations[2])
