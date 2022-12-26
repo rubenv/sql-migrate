@@ -466,6 +466,7 @@ func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, di
 	return ms.applyMigrations(dir, migrations, dbMap)
 }
 
+// Returns the number of applied migrations.
 func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
 	migrations, dbMap, err := ms.PlanMigrationToVersion(db, dialect, m, dir, version)
 	if err != nil {
@@ -474,6 +475,7 @@ func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource
 	return ms.applyMigrations(dir, migrations, dbMap)
 }
 
+// Applies the planned migrations and returns the number of applied migrations.
 func (ms MigrationSet) applyMigrations(dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
 	applied := 0
 	for _, migration := range migrations {
@@ -553,15 +555,18 @@ func PlanMigrationToVersion(db *sql.DB, dialect string, m MigrationSource, dir M
 	return migSet.PlanMigrationToVersion(db, dialect, m, dir, version)
 }
 
+// Plan a migration.
 func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
-	return ms.planMigration(db, dialect, m, dir, max, -1)
+	return ms.planMigrationCommon(db, dialect, m, dir, max, -1)
 }
 
+// Plan a migration to version.
 func (ms MigrationSet) PlanMigrationToVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
-	return ms.planMigration(db, dialect, m, dir, 0, version)
+	return ms.planMigrationCommon(db, dialect, m, dir, 0, version)
 }
 
-func (ms MigrationSet) planMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+// A common method to plan a migration.
+func (ms MigrationSet) planMigrationCommon(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap, err := ms.getMigrationDbMap(db, dialect)
 	if err != nil {
 		return nil, nil, err
