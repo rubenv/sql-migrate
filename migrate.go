@@ -459,7 +459,7 @@ func ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDir
 
 // Returns the number of applied migrations.
 func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max, -1)
+	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
 		return 0, err
 	}
@@ -467,7 +467,7 @@ func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, di
 }
 
 func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
-	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, 0, version)
+	migrations, dbMap, err := ms.PlanMigrationToVersion(db, dialect, m, dir, version)
 	if err != nil {
 		return 0, err
 	}
@@ -544,11 +544,24 @@ func (ms MigrationSet) applyMigrations(dir MigrationDirection, migrations []*Pla
 }
 
 // Plan a migration.
-func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
-	return migSet.PlanMigration(db, dialect, m, dir, max, version)
+func PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
+	return migSet.PlanMigration(db, dialect, m, dir, max)
 }
 
-func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+// Plan a migration to version.
+func PlanMigrationToVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+	return migSet.PlanMigrationToVersion(db, dialect, m, dir, version)
+}
+
+func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
+	return ms.planMigration(db, dialect, m, dir, max, -1)
+}
+
+func (ms MigrationSet) PlanMigrationToVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+	return ms.planMigration(db, dialect, m, dir, 0, version)
+}
+
+func (ms MigrationSet) planMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap, err := ms.getMigrationDbMap(db, dialect)
 	if err != nil {
 		return nil, nil, err
@@ -651,7 +664,7 @@ func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSour
 //
 // Returns the number of skipped migrations.
 func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
-	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max, -1)
+	migrations, dbMap, err := PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
 		return 0, err
 	}

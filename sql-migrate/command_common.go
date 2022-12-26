@@ -23,7 +23,14 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, ver
 	}
 
 	if dryrun {
-		migrations, _, err := migrate.PlanMigration(db, dialect, source, dir, limit, version)
+		var migrations []*migrate.PlannedMigration
+
+		if version >= 0 {
+			migrations, _, err = migrate.PlanMigrationToVersion(db, dialect, source, dir, version)
+		} else {
+			migrations, _, err = migrate.PlanMigration(db, dialect, source, dir, limit)
+		}
+
 		if err != nil {
 			return fmt.Errorf("Cannot plan migration: %s", err)
 		}
@@ -33,9 +40,8 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, ver
 		}
 	} else {
 		var n int
-		var err error
 
-		if version > 0 {
+		if version >= 0 {
 			n, err = migrate.ExecVersion(db, dialect, source, dir, version)
 		} else {
 			n, err = migrate.ExecMax(db, dialect, source, dir, limit)

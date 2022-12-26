@@ -60,7 +60,7 @@ func (c *RedoCommand) Run(args []string) int {
 		Dir: env.Dir,
 	}
 
-	migrations, _, err := migrate.PlanMigration(db, dialect, source, migrate.Down, 1, -1)
+	migrations, _, err := migrate.PlanMigration(db, dialect, source, migrate.Down, 1)
 	if err != nil {
 		ui.Error(fmt.Sprintf("Migration (redo) failed: %v", err))
 		return 1
