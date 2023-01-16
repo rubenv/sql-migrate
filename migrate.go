@@ -814,7 +814,7 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 	table := dbMap.AddTableWithNameAndSchema(MigrationRecord{}, ms.SchemaName, ms.getTableName()).SetKeys(false, "Id")
 	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 
-	if dialect == "oci8" || dialect == "godror" {
+	if dialect == "oci8" || dialect == "godror" || dialect == "mssql" {
 		table.ColMap("Id").SetMaxSize(4000)
 	}
 
