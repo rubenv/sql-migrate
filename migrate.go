@@ -168,6 +168,19 @@ type PlannedMigration struct {
 	Queries            []string
 }
 
+// isUpQuery returns true if the query is an "up" query.
+func (m PlannedMigration) isUpQuery() bool {
+	if len(m.Up) != len(m.Queries) {
+		return false
+	}
+	for i, query := range m.Up {
+		if query != m.Queries[i] {
+			return false
+		}
+	}
+	return true
+}
+
 type byId []*Migration
 
 func (b byId) Len() int           { return len(b) }
@@ -505,8 +518,12 @@ func (ms MigrationSet) applyMigrations(dir MigrationDirection, migrations []*Pla
 			}
 		}
 
-		switch dir {
-		case Up:
+		switch {
+		// case when we are migrating down, but a migration up was not applied.
+		// See MigrationSet.planMigrationCommon and the ToCatchup call.
+		case dir == Down && migration.isUpQuery():
+			fallthrough
+		case dir == Up:
 			err = executor.Insert(&MigrationRecord{
 				Id:        migration.Id,
 				AppliedAt: time.Now(),
@@ -518,7 +535,7 @@ func (ms MigrationSet) applyMigrations(dir MigrationDirection, migrations []*Pla
 
 				return applied, newTxError(migration, err)
 			}
-		case Down:
+		case dir == Down:
 			_, err := executor.Delete(&MigrationRecord{
 				Id: migration.Id,
 			})
