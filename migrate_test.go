@@ -502,6 +502,60 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, down)
 }
 
+func (s *SqliteMigrateSuite) TestPlanMigrationWithHolesThenCatchupOnDown(c *C) {
+	up := "SELECT 0"
+	down := "SELECT 1"
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			{
+				Id:   "1",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+			{
+				Id:   "3",
+				Up:   []string{up},
+				Down: []string{down},
+			},
+		},
+	}
+
+	// apply #1 and #3
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	records, err := GetMigrationRecords(s.Db, "sqlite3")
+	c.Assert(err, IsNil)
+	c.Assert(records, HasLen, 2)
+
+	// add #2 (a missing migration up)
+	migrations.Migrations = append(migrations.Migrations, &Migration{
+		Id:   "2",
+		Up:   []string{up},
+		Down: []string{down},
+	})
+
+	// going down of 1 operation (3), will apply #2 also.
+	plannedMigrations, _, err := PlanMigration(s.Db, "sqlite3", migrations, Down, 1)
+	c.Assert(err, IsNil)
+	c.Assert(plannedMigrations, HasLen, 2)
+	c.Assert(plannedMigrations[0].Migration.Id, Equals, "2")
+	c.Assert(plannedMigrations[0].Queries[0], Equals, up)
+	c.Assert(plannedMigrations[1].Migration.Id, Equals, "3")
+	c.Assert(plannedMigrations[1].Queries[0], Equals, down)
+
+	// exec down of 1
+	n, err = ExecMax(s.Db, "sqlite3", migrations, Down, 1)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// should be 2: #1 do not change, #2 is applied by catchup, #3 is down
+	records, err = GetMigrationRecords(s.Db, "sqlite3")
+	c.Assert(err, IsNil)
+	c.Assert(records, HasLen, 2)
+}
+
 func (s *SqliteMigrateSuite) TestLess(c *C) {
 	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "2"}), Equals, true)           // 1 less than 2
 	c.Assert((Migration{Id: "2"}).Less(&Migration{Id: "1"}), Equals, false)          // 2 not less than 1
