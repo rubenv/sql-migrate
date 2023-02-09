@@ -35,11 +35,11 @@ var (
 func errNoTerminator() error {
 	if len(LineSeparator) == 0 {
 		return errors.New(`ERROR: The last statement must be ended by a semicolon or '-- +migrate StatementEnd' marker.
-			See https://github.com/rubenv/sql-migrate for details.`)
+			See https://github.com/heroiclabs/sql-migrate for details.`)
 	}
 
 	return errors.New(fmt.Sprintf(`ERROR: The last statement must be ended by a semicolon, a line whose contents are %q, or '-- +migrate StatementEnd' marker.
-			See https://github.com/rubenv/sql-migrate for details.`, LineSeparator))
+			See https://github.com/heroiclabs/sql-migrate for details.`, LineSeparator))
 }
 
 // Checks the line to see if the line has a statement-ending semicolon
@@ -221,7 +221,7 @@ func ParseMigration(r io.ReadSeeker) (*ParsedMigration, error) {
 
 	if currentDirection == directionNone {
 		return nil, errors.New(`ERROR: no Up/Down annotations found, so no statements were executed.
-			See https://github.com/rubenv/sql-migrate for details.`)
+			See https://github.com/heroiclabs/sql-migrate for details.`)
 	}
 
 	// allow comment without sql instruction. Example:
