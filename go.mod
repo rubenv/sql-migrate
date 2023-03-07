@@ -6,7 +6,7 @@ require (
 	github.com/Masterminds/sprig/v3 v3.2.3 // indirect
 	github.com/armon/go-radix v1.0.0 // indirect
 	github.com/denisenkom/go-mssqldb v0.9.0
-	github.com/go-gorp/gorp/v3 v3.0.5
+	github.com/go-gorp/gorp/v3 v3.1.0
 	github.com/go-sql-driver/mysql v1.6.0
 	github.com/gobuffalo/packr/v2 v2.8.3
 	github.com/godror/godror v0.24.2
