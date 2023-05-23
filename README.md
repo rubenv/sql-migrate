@@ -66,7 +66,7 @@ This may be useful if one doesn't want to store credentials in file:
 ```yml
 production:
     dialect: postgres
-    datasource: host=prodhost dbname=proddb user=${DB_USER} password=${DB_PASSWORD} sslmode=required
+    datasource: host=prodhost dbname=proddb user=${DB_USER} password=${DB_PASSWORD} sslmode=require
     dir: migrations
     table: migrations
 ```
