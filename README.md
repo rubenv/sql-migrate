@@ -14,6 +14,7 @@
 * Up/down migrations to allow rollback
 * Supports multiple database types in one project
 * Works great with other libraries such as [sqlx](https://jmoiron.github.io/sqlx/)
+* Does not support running in concurrency or in multiple instances
 
 ## Installation
 
