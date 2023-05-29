@@ -758,3 +758,51 @@ func (s *SqliteMigrateSuite) TestGetMigrationDbMapWithDisableCreateTable(c *C) {
 	_, err := migSet.getMigrationDbMap(s.Db, "postgres")
 	c.Assert(err, IsNil)
 }
+
+// If ms.DisableCreateTable == true, then the the migrations table should not be
+// created, regardless of the global migSet.DisableCreateTable setting.
+func (s *SqliteMigrateSuite) TestGetMigrationObjDbMapWithDisableCreateTableTrue(c *C) {
+	SetDisableCreateTable(false)
+	ms := MigrationSet{
+		DisableCreateTable: true,
+		TableName:          "silly_example_table",
+	}
+	c.Assert(migSet.DisableCreateTable, Equals, false)
+	c.Assert(ms.DisableCreateTable, Equals, true)
+
+	dbMap, err := ms.getMigrationDbMap(s.Db, "sqlite3")
+	c.Assert(err, IsNil)
+	c.Assert(dbMap, NotNil)
+
+	tableNameIfExists, err := s.DbMap.SelectNullStr(
+		"SELECT name FROM sqlite_master WHERE type='table' AND name=$1",
+		ms.TableName,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(tableNameIfExists.Valid, Equals, false)
+}
+
+// If ms.DisableCreateTable == false, then the the migrations table should not be
+// created, regardless of the global migSet.DisableCreateTable setting.
+func (s *SqliteMigrateSuite) TestGetMigrationObjDbMapWithDisableCreateTableFalse(c *C) {
+	SetDisableCreateTable(true)
+	defer SetDisableCreateTable(false) // reset the global state when the test ends.
+	ms := MigrationSet{
+		DisableCreateTable: false,
+		TableName:          "silly_example_table",
+	}
+	c.Assert(migSet.DisableCreateTable, Equals, true)
+	c.Assert(ms.DisableCreateTable, Equals, false)
+
+	dbMap, err := ms.getMigrationDbMap(s.Db, "sqlite3")
+	c.Assert(err, IsNil)
+	c.Assert(dbMap, NotNil)
+
+	tableNameIfExists, err := s.DbMap.SelectNullStr(
+		"SELECT name FROM sqlite_master WHERE type='table' AND name=$1",
+		ms.TableName,
+	)
+	c.Assert(err, IsNil)
+	c.Assert(tableNameIfExists.Valid, Equals, true)
+	c.Assert(tableNameIfExists.String, Equals, ms.TableName)
+}

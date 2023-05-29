@@ -819,7 +819,7 @@ Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
 		table.ColMap("Id").SetMaxSize(4000)
 	}
 
-	if migSet.DisableCreateTable {
+	if ms.DisableCreateTable {
 		return dbMap, nil
 	}
 
