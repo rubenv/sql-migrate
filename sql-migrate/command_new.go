@@ -16,16 +16,11 @@ var templateContent = `
 
 -- +migrate Down
 `
-var tpl *template.Template
+var tpl = template.Must(template.New("new_migration").Parse(templateContent))
 
-func init() {
-	tpl = template.Must(template.New("new_migration").Parse(templateContent))
-}
+type NewCommand struct{}
 
-type NewCommand struct {
-}
-
-func (c *NewCommand) Help() string {
+func (*NewCommand) Help() string {
 	helpText := `
 Usage: sql-migrate new [options] name
 
@@ -40,7 +35,7 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
-func (c *NewCommand) Synopsis() string {
+func (*NewCommand) Synopsis() string {
 	return "Create a new migration"
 }
 
@@ -79,7 +74,6 @@ func CreateMigration(name string) error {
 	fileName := fmt.Sprintf("%s-%s.sql", time.Now().Format("20060102150405"), strings.TrimSpace(name))
 	pathName := path.Join(env.Dir, fileName)
 	f, err := os.Create(pathName)
-
 	if err != nil {
 		return err
 	}

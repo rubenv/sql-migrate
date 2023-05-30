@@ -8,10 +8,9 @@ import (
 	migrate "github.com/rubenv/sql-migrate"
 )
 
-type RedoCommand struct {
-}
+type RedoCommand struct{}
 
-func (c *RedoCommand) Help() string {
+func (*RedoCommand) Help() string {
 	helpText := `
 Usage: sql-migrate redo [options] ...
 
@@ -27,7 +26,7 @@ Options:
 	return strings.TrimSpace(helpText)
 }
 
-func (c *RedoCommand) Synopsis() string {
+func (*RedoCommand) Synopsis() string {
 	return "Reapply the last migration"
 }
 

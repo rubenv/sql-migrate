@@ -183,15 +183,15 @@ type OracleDialect struct {
 	gorp.OracleDialect
 }
 
-func (d OracleDialect) IfTableNotExists(command, schema, table string) string {
+func (OracleDialect) IfTableNotExists(command, _, _ string) string {
 	return command
 }
 
-func (d OracleDialect) IfSchemaNotExists(command, schema string) string {
+func (OracleDialect) IfSchemaNotExists(command, _ string) string {
 	return command
 }
 
-func (d OracleDialect) IfTableExists(command, schema, table string) string {
+func (OracleDialect) IfTableExists(command, _, _ string) string {
 	return command
 }
 
@@ -287,13 +287,13 @@ func migrationFromFile(dir http.FileSystem, root string, info os.FileInfo) (*Mig
 	path := path.Join(root, info.Name())
 	file, err := dir.Open(path)
 	if err != nil {
-		return nil, fmt.Errorf("Error while opening %s: %s", info.Name(), err)
+		return nil, fmt.Errorf("Error while opening %s: %w", info.Name(), err)
 	}
 	defer func() { _ = file.Close() }()
 
 	migration, err := ParseMigration(info.Name(), file)
 	if err != nil {
-		return nil, fmt.Errorf("Error while parsing %s: %s", info.Name(), err)
+		return nil, fmt.Errorf("Error while parsing %s: %w", info.Name(), err)
 	}
 	return migration, nil
 }
@@ -407,7 +407,7 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 
 	parsed, err := sqlparse.ParseMigration(r)
 	if err != nil {
-		return nil, fmt.Errorf("Error parsing migration (%s): %s", id, err)
+		return nil, fmt.Errorf("Error parsing migration (%s): %w", id, err)
 	}
 
 	m.Up = parsed.UpStatements
@@ -477,7 +477,7 @@ func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource
 }
 
 // Applies the planned migrations and returns the number of applied migrations.
-func (ms MigrationSet) applyMigrations(dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
+func (MigrationSet) applyMigrations(dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
 	applied := 0
 	for _, migration := range migrations {
 		var executor SqlExecutor
@@ -645,7 +645,6 @@ func (ms MigrationSet) planMigrationCommon(db *sql.DB, dialect string, m Migrati
 		toApplyCount = max
 	}
 	for _, v := range toApply[0:toApplyCount] {
-
 		if dir == Up {
 			result = append(result, &PlannedMigration{
 				Migration:          v,
@@ -715,7 +714,7 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 
 // Filter a slice of migrations into ones that should be applied.
 func ToApply(migrations []*Migration, current string, direction MigrationDirection) []*Migration {
-	var index = -1
+	index := -1
 	if current != "" {
 		for index < len(migrations)-1 {
 			index++
@@ -804,16 +803,14 @@ func (ms MigrationSet) getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMa
 
 Make sure that the parseTime option is supplied to your database connection.
 Check https://github.com/go-sql-driver/mysql#parsetime for more info.`)
-			} else {
-				return nil, err
 			}
+			return nil, err
 		}
 	}
 
 	// Create migration database map
 	dbMap := &gorp.DbMap{Db: db, Dialect: d}
 	table := dbMap.AddTableWithNameAndSchema(MigrationRecord{}, ms.SchemaName, ms.getTableName()).SetKeys(false, "Id")
-	//dbMap.TraceOn("", log.New(os.Stdout, "migrate: ", log.Lmicroseconds))
 
 	if dialect == "oci8" || dialect == "godror" {
 		table.ColMap("Id").SetMaxSize(4000)
