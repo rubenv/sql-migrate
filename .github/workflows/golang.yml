@@ -1,0 +1,46 @@
+name: golang
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+jobs:
+  test:
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: [ '1.13', '1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: setup-go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+          cache-dependency-path: go.sum
+      - name: go build
+        run: go build -o ./bin/sql-migrate ./sql-migrate && ./bin/sql-migrate --help
+      - name: go test
+        run: go test ./...
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: setup-go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.20'
+          cache: true
+          cache-dependency-path: go.sum
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v3
+        with:
+          version: v1.52.2
+      - name: go mod tidy
+        run: go mod tidy
+      - name: check for any changes
+        run: >
+          [[ $(git status --porcelain) == "" ]] || (echo "changes detected" && exit 1)
