@@ -7,7 +7,7 @@ on:
 jobs:
   test:
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         go-version: [ '1.13', '1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
     runs-on: ubuntu-latest
@@ -42,5 +42,70 @@ jobs:
       - name: go mod tidy
         run: go mod tidy
       - name: check for any changes
-        run: >
+        run: |
           [[ $(git status --porcelain) == "" ]] || (echo "changes detected" && exit 1)
+  integration:
+    needs:
+      - test
+      - lint
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: true
+      matrix:
+        go-version: [ '1.13', '1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: '1'
+          MYSQL_ROOT_PASSWORD: ''
+          MYSQL_DATABASE: 'test'
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_PASSWORD: 'password'
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      MYSQL_HOST: '127.0.0.1'
+      PGHOST: '127.0.0.1'
+      PGUSER: 'postgres'
+      PGPASSWORD: 'password'
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+      - name: setup-go
+        uses: actions/setup-go@v4
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true
+          cache-dependency-path: go.sum
+      - name: setup databases
+        run: |
+          mysql --user=root -e 'CREATE DATABASE IF NOT EXISTS test;'
+          mysql --user=root -e 'CREATE DATABASE IF NOT EXISTS test_env;'
+          psql -U postgres -c 'CREATE DATABASE test;'
+      - name: install sql-migrate
+        run: go install ./...
+      - name: postgres
+        run: bash ./test-integration/postgres.sh
+      - name: mysql
+        run: bash ./test-integration/mysql.sh
+      - name: mysql-flag
+        run: bash ./test-integration/mysql-flag.sh
+      - name: mysql-env
+        run: bash ./test-integration/mysql-env.sh
+      - name: sqlite
+        run: bash ./test-integration/sqlite.sh
