@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/olekukonko/tablewriter"
+	"github.com/posener/complete"
 
 	migrate "github.com/rubenv/sql-migrate"
 )
@@ -31,6 +32,16 @@ Options:
 
 func (*StatusCommand) Synopsis() string {
 	return "Show migration status"
+}
+
+func (*StatusCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (*StatusCommand) AutocompleteFlags() complete.Flags {
+	f := complete.Flags{}
+	ConfigFlagsCompletions(f)
+	return f
 }
 
 func (c *StatusCommand) Run(args []string) int {

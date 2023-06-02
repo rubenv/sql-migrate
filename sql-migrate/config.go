@@ -9,6 +9,7 @@ import (
 	"runtime/debug"
 
 	"github.com/go-gorp/gorp/v3"
+	"github.com/posener/complete"
 	"gopkg.in/yaml.v2"
 
 	migrate "github.com/rubenv/sql-migrate"
@@ -32,6 +33,26 @@ var (
 func ConfigFlags(f *flag.FlagSet) {
 	f.StringVar(&ConfigFile, "config", "dbconfig.yml", "Configuration file to use.")
 	f.StringVar(&ConfigEnvironment, "env", "development", "Environment to use.")
+}
+
+func ConfigFlagsCompletions(f complete.Flags) {
+	f["-config"] = complete.PredictOr(complete.PredictFiles("*.yaml"), complete.PredictFiles("*.yml"))
+	f["-env"] = complete.PredictFunc(func(args complete.Args) []string {
+		cf := flag.NewFlagSet("", flag.ContinueOnError)
+		ConfigFlags(cf)
+		if err := cf.Parse(args.All); err != nil {
+			return nil
+		}
+		config, err := ReadConfig()
+		if err != nil {
+			return nil
+		}
+		envs := make([]string, 0, len(config))
+		for k := range config {
+			envs = append(envs, k)
+		}
+		return envs
+	})
 }
 
 type Environment struct {

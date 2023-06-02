@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/posener/complete"
+
 	migrate "github.com/rubenv/sql-migrate"
 )
 
@@ -28,6 +30,18 @@ Options:
 
 func (*RedoCommand) Synopsis() string {
 	return "Reapply the last migration"
+}
+
+func (*RedoCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (*RedoCommand) AutocompleteFlags() complete.Flags {
+	f := complete.Flags{
+		"-dryrun": complete.PredictNothing,
+	}
+	ConfigFlagsCompletions(f)
+	return f
 }
 
 func (c *RedoCommand) Run(args []string) int {

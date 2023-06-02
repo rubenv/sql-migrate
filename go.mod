@@ -12,6 +12,7 @@ require (
 	github.com/mattn/go-sqlite3 v1.14.19
 	github.com/mitchellh/cli v1.1.5
 	github.com/olekukonko/tablewriter v0.0.5
+	github.com/posener/complete v1.2.3
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
 	gopkg.in/yaml.v2 v2.4.0
 )
@@ -38,7 +39,6 @@ require (
 	github.com/mattn/go-runewidth v0.0.9 // indirect
 	github.com/mitchellh/copystructure v1.2.0 // indirect
 	github.com/mitchellh/reflectwalk v1.0.2 // indirect
-	github.com/posener/complete v1.2.3 // indirect
 	github.com/rogpeppe/go-internal v1.9.0 // indirect
 	github.com/shopspring/decimal v1.3.1 // indirect
 	github.com/spf13/cast v1.5.0 // indirect
