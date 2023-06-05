@@ -9,12 +9,11 @@ import (
 
 func Test(t *testing.T) { TestingT(t) }
 
-type SqlParseSuite struct {
-}
+type SqlParseSuite struct{}
 
 var _ = Suite(&SqlParseSuite{})
 
-func (s *SqlParseSuite) TestSemicolons(c *C) {
+func (*SqlParseSuite) TestSemicolons(c *C) {
 	type testData struct {
 		line   string
 		result bool
@@ -53,7 +52,7 @@ func (s *SqlParseSuite) TestSemicolons(c *C) {
 	}
 }
 
-func (s *SqlParseSuite) TestSplitStatements(c *C) {
+func (*SqlParseSuite) TestSplitStatements(c *C) {
 	type testData struct {
 		sql       string
 		upCount   int
@@ -81,21 +80,21 @@ func (s *SqlParseSuite) TestSplitStatements(c *C) {
 	}
 }
 
-func (s *SqlParseSuite) TestIntentionallyBadStatements(c *C) {
+func (*SqlParseSuite) TestIntentionallyBadStatements(c *C) {
 	for _, test := range intentionallyBad {
 		_, err := ParseMigration(strings.NewReader(test))
 		c.Assert(err, NotNil)
 	}
 }
 
-func (s *SqlParseSuite) TestJustComment(c *C) {
+func (*SqlParseSuite) TestJustComment(c *C) {
 	for _, test := range justAComment {
 		_, err := ParseMigration(strings.NewReader(test))
 		c.Assert(err, NotNil)
 	}
 }
 
-func (s *SqlParseSuite) TestCustomTerminator(c *C) {
+func (*SqlParseSuite) TestCustomTerminator(c *C) {
 	LineSeparator = "GO"
 	defer func() { LineSeparator = "" }()
 
@@ -376,4 +375,5 @@ CREATE TABLE post (
 
 -- +migrate Down
 -- no migration here
-`}
+`,
+}
