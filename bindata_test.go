@@ -11,7 +11,7 @@ import (
 func bindata_read(data []byte, name string) ([]byte, error) {
 	gz, err := gzip.NewReader(bytes.NewBuffer(data))
 	if err != nil {
-		return nil, fmt.Errorf("Read %q: %v", name, err)
+		return nil, fmt.Errorf("Read %q: %w", name, err)
 	}
 
 	var buf bytes.Buffer
@@ -21,7 +21,7 @@ func bindata_read(data []byte, name string) ([]byte, error) {
 	}
 
 	if err != nil {
-		return nil, fmt.Errorf("Read %q: %v", name, err)
+		return nil, fmt.Errorf("Read %q: %w", name, err)
 	}
 
 	return buf.Bytes(), nil
@@ -68,7 +68,7 @@ func test_migrations_2_record_sql() ([]byte, error) {
 // It returns an error if the asset could not be found or
 // could not be loaded.
 func Asset(name string) ([]byte, error) {
-	canonicalName := strings.Replace(name, "\\", "/", -1)
+	canonicalName := strings.ReplaceAll(name, "\\", "/")
 	if f, ok := _bindata[canonicalName]; ok {
 		return f()
 	}
@@ -108,7 +108,7 @@ var _bindata = map[string]func() ([]byte, error){
 func AssetDir(name string) ([]string, error) {
 	node := _bintree
 	if len(name) != 0 {
-		canonicalName := strings.Replace(name, "\\", "/", -1)
+		canonicalName := strings.ReplaceAll(name, "\\", "/")
 		pathList := strings.Split(canonicalName, "/")
 		for _, p := range pathList {
 			node = node.Children[p]
@@ -133,8 +133,8 @@ type _bintree_t struct {
 }
 
 var _bintree = &_bintree_t{nil, map[string]*_bintree_t{
-	"test-migrations": &_bintree_t{nil, map[string]*_bintree_t{
-		"1_initial.sql": &_bintree_t{test_migrations_1_initial_sql, map[string]*_bintree_t{}},
-		"2_record.sql":  &_bintree_t{test_migrations_2_record_sql, map[string]*_bintree_t{}},
+	"test-migrations": {nil, map[string]*_bintree_t{
+		"1_initial.sql": {test_migrations_1_initial_sql, map[string]*_bintree_t{}},
+		"2_record.sql":  {test_migrations_2_record_sql, map[string]*_bintree_t{}},
 	}},
 }}

@@ -504,7 +504,7 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithHoles(c *C) {
 	c.Assert(plannedMigrations[2].Queries[0], Equals, down)
 }
 
-func (s *SqliteMigrateSuite) TestLess(c *C) {
+func (*SqliteMigrateSuite) TestLess(c *C) {
 	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "2"}), Equals, true)           // 1 less than 2
 	c.Assert((Migration{Id: "2"}).Less(&Migration{Id: "1"}), Equals, false)          // 2 not less than 1
 	c.Assert((Migration{Id: "1"}).Less(&Migration{Id: "a"}), Equals, true)           // 1 less than a
@@ -522,7 +522,6 @@ func (s *SqliteMigrateSuite) TestLess(c *C) {
 	// 20160126_1200 not less than 20160126_1100
 	c.Assert((Migration{Id: "20160126_1200"}).
 		Less(&Migration{Id: "20160126_1100"}), Equals, false)
-
 }
 
 func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplied(c *C) {
@@ -665,7 +664,7 @@ func (s *SqliteMigrateSuite) TestExecWithUnknownMigrationInDatabase(c *C) {
 	c.Assert(n, Equals, 2)
 
 	// Then create a new migration source with one of the migrations missing
-	var newSqliteMigrations = []*Migration{
+	newSqliteMigrations := []*Migration{
 		{
 			Id:   "124_other",
 			Up:   []string{"ALTER TABLE people ADD COLUMN middle_name text"},
@@ -744,7 +743,7 @@ func (s *SqliteMigrateSuite) TestRunMigrationObjOtherTable(c *C) {
 	c.Assert(n, Equals, 0)
 }
 
-func (s *SqliteMigrateSuite) TestSetDisableCreateTable(c *C) {
+func (*SqliteMigrateSuite) TestSetDisableCreateTable(c *C) {
 	c.Assert(migSet.DisableCreateTable, Equals, false)
 
 	SetDisableCreateTable(true)

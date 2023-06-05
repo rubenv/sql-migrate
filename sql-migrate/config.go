@@ -10,8 +10,9 @@ import (
 	"runtime/debug"
 
 	"github.com/go-gorp/gorp/v3"
-	migrate "github.com/rubenv/sql-migrate"
 	"gopkg.in/yaml.v2"
+
+	migrate "github.com/rubenv/sql-migrate"
 
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
@@ -24,8 +25,10 @@ var dialects = map[string]gorp.Dialect{
 	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
 }
 
-var ConfigFile string
-var ConfigEnvironment string
+var (
+	ConfigFile        string
+	ConfigEnvironment string
+)
 
 func ConfigFlags(f *flag.FlagSet) {
 	f.StringVar(&ConfigFile, "config", "dbconfig.yml", "Configuration file to use.")
@@ -96,7 +99,7 @@ func GetEnvironment() (*Environment, error) {
 func GetConnection(env *Environment) (*sql.DB, string, error) {
 	db, err := sql.Open(env.Dialect, env.DataSource)
 	if err != nil {
-		return nil, "", fmt.Errorf("Cannot connect to database: %s", err)
+		return nil, "", fmt.Errorf("Cannot connect to database: %w", err)
 	}
 
 	// Make sure we only accept dialects that were compiled in.
