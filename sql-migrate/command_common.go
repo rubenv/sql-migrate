@@ -9,7 +9,7 @@ import (
 func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, version int64) error {
 	env, err := GetEnvironment()
 	if err != nil {
-		return fmt.Errorf("Could not parse config: %s", err)
+		return fmt.Errorf("Could not parse config: %w", err)
 	}
 
 	db, dialect, err := GetConnection(env)
@@ -32,7 +32,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, ver
 		}
 
 		if err != nil {
-			return fmt.Errorf("Cannot plan migration: %s", err)
+			return fmt.Errorf("Cannot plan migration: %w", err)
 		}
 
 		for _, m := range migrations {
@@ -48,7 +48,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, ver
 		}
 
 		if err != nil {
-			return fmt.Errorf("Migration failed: %s", err)
+			return fmt.Errorf("Migration failed: %w", err)
 		}
 
 		if n == 1 {
