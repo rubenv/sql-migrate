@@ -2,6 +2,7 @@ package migrate
 
 import (
 	"bytes"
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -429,12 +430,24 @@ type SqlExecutor interface {
 //
 // Returns the number of applied migrations.
 func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ExecMax(db, dialect, m, dir, 0)
+	return ExecMaxContext(context.Background(), db, dialect, m, dir, 0)
 }
 
 // Returns the number of applied migrations.
 func (ms MigrationSet) Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
-	return ms.ExecMax(db, dialect, m, dir, 0)
+	return ms.ExecMaxContext(context.Background(), db, dialect, m, dir, 0)
+}
+
+// Execute a set of migrations with an input context.
+//
+// Returns the number of applied migrations.
+func ExecContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
+	return ExecMaxContext(ctx, db, dialect, m, dir, 0)
+}
+
+// Returns the number of applied migrations.
+func (ms MigrationSet) ExecContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
+	return ms.ExecMaxContext(ctx, db, dialect, m, dir, 0)
 }
 
 // Execute a set of migrations
@@ -446,50 +459,78 @@ func ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	return migSet.ExecMax(db, dialect, m, dir, max)
 }
 
+// Execute a set of migrations with an input context.
+//
+// Will apply at most `max` migrations. Pass 0 for no limit (or use Exec).
+//
+// Returns the number of applied migrations.
+func ExecMaxContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+	return migSet.ExecMaxContext(ctx, db, dialect, m, dir, max)
+}
+
 // Execute a set of migrations
 //
 // Will apply at the target `version` of migration. Cannot be a negative value.
 //
 // Returns the number of applied migrations.
 func ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
+	return ExecVersionContext(context.Background(), db, dialect, m, dir, version)
+}
+
+// Execute a set of migrations with an input context.
+//
+// Will apply at the target `version` of migration. Cannot be a negative value.
+//
+// Returns the number of applied migrations.
+func ExecVersionContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
 	if version < 0 {
 		return 0, fmt.Errorf("target version %d should not be negative", version)
 	}
-	return migSet.ExecVersion(db, dialect, m, dir, version)
+	return migSet.ExecVersionContext(ctx, db, dialect, m, dir, version)
 }
 
 // Returns the number of applied migrations.
 func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+	return ms.ExecMaxContext(context.Background(), db, dialect, m, dir, max)
+}
+
+// Returns the number of applied migrations, but applies with an input context.
+func (ms MigrationSet) ExecMaxContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
 	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
 		return 0, err
 	}
-	return ms.applyMigrations(dir, migrations, dbMap)
+	return ms.applyMigrations(ctx, dir, migrations, dbMap)
 }
 
 // Returns the number of applied migrations.
 func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
+	return ms.ExecVersionContext(context.Background(), db, dialect, m, dir, version)
+}
+
+func (ms MigrationSet) ExecVersionContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
 	migrations, dbMap, err := ms.PlanMigrationToVersion(db, dialect, m, dir, version)
 	if err != nil {
 		return 0, err
 	}
-	return ms.applyMigrations(dir, migrations, dbMap)
+	return ms.applyMigrations(ctx, dir, migrations, dbMap)
 }
 
 // Applies the planned migrations and returns the number of applied migrations.
-func (MigrationSet) applyMigrations(dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
+func (MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
 	applied := 0
 	for _, migration := range migrations {
 		var executor SqlExecutor
 		var err error
 
 		if migration.DisableTransaction {
-			executor = dbMap
+			executor = dbMap.WithContext(ctx)
 		} else {
-			executor, err = dbMap.Begin()
+			e, err := dbMap.Begin()
 			if err != nil {
 				return applied, newTxError(migration, err)
 			}
+			executor = e.WithContext(ctx)
 		}
 
 		for _, stmt := range migration.Queries {

@@ -1,8 +1,10 @@
 package migrate
 
 import (
+	"context"
 	"database/sql"
 	"net/http"
+	"time"
 
 	"github.com/go-gorp/gorp/v3"
 	"github.com/gobuffalo/packr/v2"
@@ -756,4 +758,40 @@ func (s *SqliteMigrateSuite) TestGetMigrationDbMapWithDisableCreateTable(c *C) {
 
 	_, err := migSet.getMigrationDbMap(s.Db, "postgres")
 	c.Assert(err, IsNil)
+}
+
+func (s *SqliteMigrateSuite) TestContextTimeout(c *C) {
+	// This statement will run for a long time: 1,000,000 iterations of the fibonacci sequence
+	fibonacciLoopStmt := `WITH RECURSIVE
+	   fibo (curr, next)
+	 AS
+	   ( SELECT 1,1
+	     UNION ALL
+	     SELECT next, curr+next FROM fibo
+	     LIMIT 1000000 )
+	 SELECT group_concat(curr) FROM fibo;
+	`
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			sqliteMigrations[0],
+			sqliteMigrations[1],
+			{
+				Id:   "125",
+				Up:   []string{fibonacciLoopStmt},
+				Down: []string{}, // Not important here
+			},
+			{
+				Id:   "125",
+				Up:   []string{"INSERT INTO people (id, first_name) VALUES (1, 'Test')", "SELECT fail"},
+				Down: []string{}, // Not important here
+			},
+		},
+	}
+
+	// Should never run the insert
+	ctx, cancelFunc := context.WithTimeout(context.Background(), 10*time.Millisecond)
+	defer cancelFunc()
+	n, err := ExecContext(ctx, s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, Not(IsNil))
+	c.Assert(n, Equals, 2)
 }
