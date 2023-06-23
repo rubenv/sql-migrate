@@ -9,8 +9,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go-version:
-          ["1.13", "1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20"]
+        go-version: ["1.17", "1.18", "1.19", "1.20"]
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -53,8 +52,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go-version:
-          ["1.13", "1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20"]
+        go-version: ["1.17", "1.18", "1.19", "1.20"]
     services:
       mysql:
         image: mysql:8.0
