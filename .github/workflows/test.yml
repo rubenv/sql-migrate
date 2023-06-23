@@ -1,4 +1,4 @@
-name: golang
+name: Test
 on:
   push:
     branches:
@@ -9,7 +9,8 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go-version: [ '1.13', '1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+        go-version:
+          ["1.13", "1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20"]
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -32,7 +33,7 @@ jobs:
       - name: setup-go
         uses: actions/setup-go@v4
         with:
-          go-version: '1.20'
+          go-version: "1.20"
           cache: true
           cache-dependency-path: go.sum
       - name: golangci-lint
@@ -52,14 +53,15 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go-version: [ '1.13', '1.14', '1.15', '1.16', '1.17', '1.18', '1.19', '1.20']
+        go-version:
+          ["1.13", "1.14", "1.15", "1.16", "1.17", "1.18", "1.19", "1.20"]
     services:
       mysql:
         image: mysql:8.0
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: '1'
-          MYSQL_ROOT_PASSWORD: ''
-          MYSQL_DATABASE: 'test'
+          MYSQL_ALLOW_EMPTY_PASSWORD: "1"
+          MYSQL_ROOT_PASSWORD: ""
+          MYSQL_DATABASE: "test"
         ports:
           - 3306:3306
         options: >-
@@ -70,7 +72,7 @@ jobs:
       postgres:
         image: postgres:15
         env:
-          POSTGRES_PASSWORD: 'password'
+          POSTGRES_PASSWORD: "password"
         ports:
           - 5432:5432
         options: >-
@@ -79,10 +81,10 @@ jobs:
           --health-timeout 5s
           --health-retries 5
     env:
-      MYSQL_HOST: '127.0.0.1'
-      PGHOST: '127.0.0.1'
-      PGUSER: 'postgres'
-      PGPASSWORD: 'password'
+      MYSQL_HOST: "127.0.0.1"
+      PGHOST: "127.0.0.1"
+      PGUSER: "postgres"
+      PGPASSWORD: "password"
     steps:
       - name: checkout
         uses: actions/checkout@v3
