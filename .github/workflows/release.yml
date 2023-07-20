@@ -2,7 +2,7 @@ name: Release
 
 on:
   release:
-    types: [ created ]
+    types: [created]
 
 jobs:
   releases-matrix:
@@ -10,12 +10,12 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        goos: [ linux, windows, darwin ]
-        goarch: [ amd64 ]
+        goos: [linux, windows, darwin]
+        goarch: [amd64]
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      - uses: wangyoucao577/go-release-action@v1.15
+      - uses: wangyoucao577/go-release-action@v1.38
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
