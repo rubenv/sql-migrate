@@ -36,12 +36,13 @@ func ConfigFlags(f *flag.FlagSet) {
 }
 
 type Environment struct {
-	Dialect       string `yaml:"dialect"`
-	DataSource    string `yaml:"datasource"`
-	Dir           string `yaml:"dir"`
-	TableName     string `yaml:"table"`
-	SchemaName    string `yaml:"schema"`
-	IgnoreUnknown bool   `yaml:"ignoreunknown"`
+	Dialect            string `yaml:"dialect"`
+	DataSource         string `yaml:"datasource"`
+	Dir                string `yaml:"dir"`
+	TableName          string `yaml:"table"`
+	SchemaName         string `yaml:"schema"`
+	IgnoreUnknown      bool   `yaml:"ignoreunknown"`
+	LimitTimePrecision bool   `yaml:"limitprecision"`
 }
 
 func ReadConfig() (map[string]*Environment, error) {
@@ -92,6 +93,8 @@ func GetEnvironment() (*Environment, error) {
 	}
 
 	migrate.SetIgnoreUnknown(env.IgnoreUnknown)
+
+	migrate.LimitTimePrecision(env.LimitTimePrecision)
 
 	return env, nil
 }
