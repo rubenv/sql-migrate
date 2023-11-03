@@ -41,6 +41,8 @@ type MigrationSet struct {
 	IgnoreUnknown bool
 	// DisableCreateTable disable the creation of the migration table
 	DisableCreateTable bool
+	// Limits precision of time values inserted into the database to 6 milliseconds
+	LimitTimePrecision bool
 }
 
 var migSet = MigrationSet{}
@@ -121,6 +123,12 @@ func SetDisableCreateTable(disable bool) {
 // This should be used sparingly as it is removing a safety check.
 func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
+}
+
+// LimitTimePrecision limits the precision of time values inserted into the database
+// to be no greater than 6 milliseconds
+func LimitTimePrecision(v bool) {
+	migSet.LimitTimePrecision = v
 }
 
 type Migration struct {
@@ -549,9 +557,13 @@ func (MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection,
 
 		switch dir {
 		case Up:
+			appliedAt := time.Now()
+			if migSet.LimitTimePrecision {
+				appliedAt = appliedAt.Round(6 * time.Millisecond)
+			}
 			err = executor.Insert(&MigrationRecord{
 				Id:        migration.Id,
-				AppliedAt: time.Now(),
+				AppliedAt: appliedAt,
 			})
 			if err != nil {
 				if trans, ok := executor.(*gorp.Transaction); ok {
@@ -729,9 +741,13 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 			}
 		}
 
+		appliedAt := time.Now()
+		if migSet.LimitTimePrecision {
+			appliedAt = appliedAt.Round(6 * time.Millisecond)
+		}
 		err = executor.Insert(&MigrationRecord{
 			Id:        migration.Id,
-			AppliedAt: time.Now(),
+			AppliedAt: appliedAt,
 		})
 		if err != nil {
 			if trans, ok := executor.(*gorp.Transaction); ok {
