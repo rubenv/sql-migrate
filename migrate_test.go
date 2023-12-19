@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/go-gorp/gorp/v3"
-	"github.com/gobuffalo/packr/v2"
 	_ "github.com/mattn/go-sqlite3"
 	. "gopkg.in/check.v1"
 )
@@ -149,39 +148,6 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 		Asset:    Asset,
 		AssetDir: AssetDir,
 		Dir:      "test-migrations",
-	}
-
-	// Executes two migrations
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, 2)
-
-	// Has data
-	id, err := s.DbMap.SelectInt("SELECT id FROM people")
-	c.Assert(err, IsNil)
-	c.Assert(id, Equals, int64(1))
-}
-
-func (s *SqliteMigrateSuite) TestPackrMigrate(c *C) {
-	migrations := &PackrMigrationSource{
-		Box: packr.New("migrations", "test-migrations"),
-	}
-
-	// Executes two migrations
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, 2)
-
-	// Has data
-	id, err := s.DbMap.SelectInt("SELECT id FROM people")
-	c.Assert(err, IsNil)
-	c.Assert(id, Equals, int64(1))
-}
-
-func (s *SqliteMigrateSuite) TestPackrMigrateDir(c *C) {
-	migrations := &PackrMigrationSource{
-		Box: packr.New(".", "."),
-		Dir: "./test-migrations/",
 	}
 
 	// Executes two migrations
