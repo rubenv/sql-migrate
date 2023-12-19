@@ -3,6 +3,7 @@ package migrate
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"net/http"
 	"time"
 
@@ -808,4 +809,24 @@ func (s *SqliteMigrateSuite) TestContextTimeout(c *C) {
 	n, err := ExecContext(ctx, s.Db, "sqlite3", migrations, Up)
 	c.Assert(err, Not(IsNil))
 	c.Assert(n, Equals, 2)
+}
+
+//go:embed test-migrations/*
+var testEmbedFS embed.FS
+
+func (s *SqliteMigrateSuite) TestEmbedSource(c *C) {
+	migrations := EmbedFileSystemMigrationSource{
+		FileSystem: testEmbedFS,
+		Root:       "test-migrations",
+	}
+
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
 }
