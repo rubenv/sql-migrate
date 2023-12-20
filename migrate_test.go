@@ -9,6 +9,7 @@ import (
 
 	"github.com/go-gorp/gorp/v3"
 	_ "github.com/mattn/go-sqlite3"
+	//revive:disable-next-line:dot-imports
 	. "gopkg.in/check.v1"
 )
 
