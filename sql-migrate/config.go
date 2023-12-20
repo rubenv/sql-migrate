@@ -5,7 +5,6 @@ import (
 	"errors"
 	"flag"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"runtime/debug"
 
@@ -45,7 +44,7 @@ type Environment struct {
 }
 
 func ReadConfig() (map[string]*Environment, error) {
-	file, err := ioutil.ReadFile(ConfigFile)
+	file, err := os.ReadFile(ConfigFile)
 	if err != nil {
 		return nil, err
 	}
