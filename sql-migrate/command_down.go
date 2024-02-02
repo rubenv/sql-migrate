@@ -4,6 +4,8 @@ import (
 	"flag"
 	"strings"
 
+	"github.com/posener/complete"
+
 	migrate "github.com/rubenv/sql-migrate"
 )
 
@@ -29,6 +31,20 @@ Options:
 
 func (*DownCommand) Synopsis() string {
 	return "Undo a database migration"
+}
+
+func (*DownCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (*DownCommand) AutocompleteFlags() complete.Flags {
+	f := complete.Flags{
+		"-limit":   complete.PredictAnything,
+		"-version": complete.PredictAnything,
+		"-dryrun":  complete.PredictNothing,
+	}
+	ConfigFlagsCompletions(f)
+	return f
 }
 
 func (c *DownCommand) Run(args []string) int {

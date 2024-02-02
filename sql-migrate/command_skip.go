@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/posener/complete"
+
 	migrate "github.com/rubenv/sql-migrate"
 )
 
@@ -28,6 +30,18 @@ Options:
 
 func (*SkipCommand) Synopsis() string {
 	return "Sets the database level to the most recent version available, without running the migrations"
+}
+
+func (*SkipCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (*SkipCommand) AutocompleteFlags() complete.Flags {
+	f := complete.Flags{
+		"-limit": complete.PredictAnything,
+	}
+	ConfigFlagsCompletions(f)
+	return f
 }
 
 func (c *SkipCommand) Run(args []string) int {
