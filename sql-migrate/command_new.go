@@ -9,6 +9,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/posener/complete"
 )
 
 var templateContent = `
@@ -37,6 +39,16 @@ Options:
 
 func (*NewCommand) Synopsis() string {
 	return "Create a new migration"
+}
+
+func (*NewCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (*NewCommand) AutocompleteFlags() complete.Flags {
+	f := complete.Flags{}
+	ConfigFlagsCompletions(f)
+	return f
 }
 
 func (c *NewCommand) Run(args []string) int {

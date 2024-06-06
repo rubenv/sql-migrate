@@ -4,6 +4,8 @@ import (
 	"flag"
 	"strings"
 
+	"github.com/posener/complete"
+
 	migrate "github.com/rubenv/sql-migrate"
 )
 
@@ -29,6 +31,20 @@ Options:
 
 func (*UpCommand) Synopsis() string {
 	return "Migrates the database to the most recent version available"
+}
+
+func (*UpCommand) AutocompleteArgs() complete.Predictor {
+	return nil
+}
+
+func (*UpCommand) AutocompleteFlags() complete.Flags {
+	f := complete.Flags{
+		"-dryrun":  complete.PredictNothing,
+		"-limit":   complete.PredictAnything,
+		"-version": complete.PredictAnything,
+	}
+	ConfigFlagsCompletions(f)
+	return f
 }
 
 func (c *UpCommand) Run(args []string) int {
