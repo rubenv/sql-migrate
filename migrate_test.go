@@ -96,6 +96,10 @@ func (s *SqliteMigrateSuite) TestMigrateIncremental(c *C) {
 		Migrations: sqliteMigrations[:1],
 	}
 
+	LimitTimePrecision(true)
+	defer func() {
+		LimitTimePrecision(false)
+	}()
 	// Executes one migration
 	n, err := Exec(s.Db, "sqlite3", migrations, Up)
 	c.Assert(err, IsNil)
@@ -384,6 +388,10 @@ func (s *SqliteMigrateSuite) TestSkipMigration(c *C) {
 			},
 		},
 	}
+	LimitTimePrecision(true)
+	defer func() {
+		LimitTimePrecision(false)
+	}()
 	n, err := SkipMax(s.Db, "sqlite3", migrations, Up, 0)
 	// there should be no errors
 	c.Assert(err, IsNil)

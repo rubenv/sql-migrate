@@ -35,12 +35,13 @@ func ConfigFlags(f *flag.FlagSet) {
 }
 
 type Environment struct {
-	Dialect       string `yaml:"dialect"`
-	DataSource    string `yaml:"datasource"`
-	Dir           string `yaml:"dir"`
-	TableName     string `yaml:"table"`
-	SchemaName    string `yaml:"schema"`
-	IgnoreUnknown bool   `yaml:"ignoreunknown"`
+	Dialect            string `yaml:"dialect"`
+	DataSource         string `yaml:"datasource"`
+	Dir                string `yaml:"dir"`
+	TableName          string `yaml:"table"`
+	SchemaName         string `yaml:"schema"`
+	IgnoreUnknown      bool   `yaml:"ignoreunknown"`
+	LimitTimePrecision bool   `yaml:"limitprecision"`
 }
 
 func ReadConfig() (map[string]*Environment, error) {
@@ -66,15 +67,15 @@ func GetEnvironment() (*Environment, error) {
 
 	env := config[ConfigEnvironment]
 	if env == nil {
-		return nil, errors.New("No environment: " + ConfigEnvironment)
+		return nil, errors.New("no environment: " + ConfigEnvironment)
 	}
 
 	if env.Dialect == "" {
-		return nil, errors.New("No dialect specified")
+		return nil, errors.New("no dialect specified")
 	}
 
 	if env.DataSource == "" {
-		return nil, errors.New("No data source specified")
+		return nil, errors.New("no data source specified")
 	}
 	env.DataSource = os.ExpandEnv(env.DataSource)
 
@@ -92,19 +93,21 @@ func GetEnvironment() (*Environment, error) {
 
 	migrate.SetIgnoreUnknown(env.IgnoreUnknown)
 
+	migrate.LimitTimePrecision(env.LimitTimePrecision)
+
 	return env, nil
 }
 
 func GetConnection(env *Environment) (*sql.DB, string, error) {
 	db, err := sql.Open(env.Dialect, env.DataSource)
 	if err != nil {
-		return nil, "", fmt.Errorf("Cannot connect to database: %w", err)
+		return nil, "", fmt.Errorf("cannot connect to database: %w", err)
 	}
 
 	// Make sure we only accept dialects that were compiled in.
 	_, exists := dialects[env.Dialect]
 	if !exists {
-		return nil, "", fmt.Errorf("Unsupported dialect: %s", env.Dialect)
+		return nil, "", fmt.Errorf("unsupported dialect: %s", env.Dialect)
 	}
 
 	return db, env.Dialect, nil
