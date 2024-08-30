@@ -3,6 +3,7 @@ package migrate
 import (
 	"sort"
 
+	//revive:disable-next-line:dot-imports
 	. "gopkg.in/check.v1"
 )
 

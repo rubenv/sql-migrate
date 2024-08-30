@@ -3,13 +3,15 @@ package migrate
 import (
 	"context"
 	"database/sql"
+	"embed"
 	"net/http"
 	"time"
 
 	"github.com/go-gorp/gorp/v3"
-	"github.com/gobuffalo/packr/v2"
-	_ "github.com/mattn/go-sqlite3"
+	//revive:disable-next-line:dot-imports
 	. "gopkg.in/check.v1"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var sqliteMigrations = []*Migration{
@@ -153,39 +155,6 @@ func (s *SqliteMigrateSuite) TestAssetMigrate(c *C) {
 		Asset:    Asset,
 		AssetDir: AssetDir,
 		Dir:      "test-migrations",
-	}
-
-	// Executes two migrations
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, 2)
-
-	// Has data
-	id, err := s.DbMap.SelectInt("SELECT id FROM people")
-	c.Assert(err, IsNil)
-	c.Assert(id, Equals, int64(1))
-}
-
-func (s *SqliteMigrateSuite) TestPackrMigrate(c *C) {
-	migrations := &PackrMigrationSource{
-		Box: packr.New("migrations", "test-migrations"),
-	}
-
-	// Executes two migrations
-	n, err := Exec(s.Db, "sqlite3", migrations, Up)
-	c.Assert(err, IsNil)
-	c.Assert(n, Equals, 2)
-
-	// Has data
-	id, err := s.DbMap.SelectInt("SELECT id FROM people")
-	c.Assert(err, IsNil)
-	c.Assert(id, Equals, int64(1))
-}
-
-func (s *SqliteMigrateSuite) TestPackrMigrateDir(c *C) {
-	migrations := &PackrMigrationSource{
-		Box: packr.New(".", "."),
-		Dir: "./test-migrations/",
 	}
 
 	// Executes two migrations
@@ -850,4 +819,24 @@ func (s *SqliteMigrateSuite) TestContextTimeout(c *C) {
 	n, err := ExecContext(ctx, s.Db, "sqlite3", migrations, Up)
 	c.Assert(err, Not(IsNil))
 	c.Assert(n, Equals, 2)
+}
+
+//go:embed test-migrations/*
+var testEmbedFS embed.FS
+
+func (s *SqliteMigrateSuite) TestEmbedSource(c *C) {
+	migrations := EmbedFileSystemMigrationSource{
+		FileSystem: testEmbedFS,
+		Root:       "test-migrations",
+	}
+
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
 }

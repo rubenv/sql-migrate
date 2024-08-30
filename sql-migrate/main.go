@@ -14,7 +14,7 @@ func main() {
 var ui cli.Ui
 
 func realMain() int {
-	ui = &cli.BasicUi{Writer: os.Stdout}
+	ui = &cli.BasicUi{Writer: os.Stdout, ErrorWriter: os.Stderr}
 
 	cli := &cli.CLI{
 		Args: os.Args[1:],
@@ -38,8 +38,10 @@ func realMain() int {
 				return &SkipCommand{}, nil
 			},
 		},
-		HelpFunc: cli.BasicHelpFunc("sql-migrate"),
-		Version:  GetVersion(),
+		HelpFunc:    cli.BasicHelpFunc("sql-migrate"),
+		HelpWriter:  os.Stdout,
+		ErrorWriter: os.Stderr,
+		Version:     GetVersion(),
 	}
 
 	exitCode, err := cli.Run()
