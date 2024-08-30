@@ -112,6 +112,11 @@ func SetSchema(name string) {
 	}
 }
 
+// Resets schema to empty
+func ResetSchema() {
+	migSet.SchemaName = ""
+}
+
 // SetDisableCreateTable sets the boolean to disable the creation of the migration table
 func SetDisableCreateTable(disable bool) {
 	migSet.DisableCreateTable = disable
