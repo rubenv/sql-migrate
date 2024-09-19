@@ -17,6 +17,8 @@ require (
 	gopkg.in/yaml.v2 v2.4.0
 )
 
+replace github.com/rubenv/sql-migrate => ./
+
 require (
 	github.com/Masterminds/goutils v1.1.1 // indirect
 	github.com/Masterminds/semver/v3 v3.2.0 // indirect
