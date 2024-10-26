@@ -19,6 +19,7 @@ import (
 
 	"github.com/go-gorp/gorp/v3"
 
+	"github.com/rubenv/sql-migrate/log"
 	"github.com/rubenv/sql-migrate/sqlparse"
 )
 
@@ -42,12 +43,14 @@ type MigrationSet struct {
 	IgnoreUnknown bool
 	// DisableCreateTable disable the creation of the migration table
 	DisableCreateTable bool
+	// Logger is used to log additional information during the migration process.
+	Logger Logger
 }
 
 var migSet = MigrationSet{}
 
 // NewMigrationSet returns a parametrized Migration object
-func (ms MigrationSet) getTableName() string {
+func (ms *MigrationSet) getTableName() string {
 	if ms.TableName == "" {
 		return "gorp_migrations"
 	}
@@ -122,6 +125,10 @@ func SetDisableCreateTable(disable bool) {
 // This should be used sparingly as it is removing a safety check.
 func SetIgnoreUnknown(v bool) {
 	migSet.IgnoreUnknown = v
+}
+
+func SetLogger(l Logger) {
+	migSet.Logger = l
 }
 
 type Migration struct {
@@ -448,7 +455,7 @@ func Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection)
 }
 
 // Returns the number of applied migrations.
-func (ms MigrationSet) Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
+func (ms *MigrationSet) Exec(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
 	return ms.ExecMaxContext(context.Background(), db, dialect, m, dir, 0)
 }
 
@@ -460,7 +467,7 @@ func ExecContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSou
 }
 
 // Returns the number of applied migrations.
-func (ms MigrationSet) ExecContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
+func (ms *MigrationSet) ExecContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection) (int, error) {
 	return ms.ExecMaxContext(ctx, db, dialect, m, dir, 0)
 }
 
@@ -504,12 +511,12 @@ func ExecVersionContext(ctx context.Context, db *sql.DB, dialect string, m Migra
 }
 
 // Returns the number of applied migrations.
-func (ms MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+func (ms *MigrationSet) ExecMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
 	return ms.ExecMaxContext(context.Background(), db, dialect, m, dir, max)
 }
 
 // Returns the number of applied migrations, but applies with an input context.
-func (ms MigrationSet) ExecMaxContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
+func (ms *MigrationSet) ExecMaxContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) (int, error) {
 	migrations, dbMap, err := ms.PlanMigration(db, dialect, m, dir, max)
 	if err != nil {
 		return 0, err
@@ -518,11 +525,11 @@ func (ms MigrationSet) ExecMaxContext(ctx context.Context, db *sql.DB, dialect s
 }
 
 // Returns the number of applied migrations.
-func (ms MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
+func (ms *MigrationSet) ExecVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
 	return ms.ExecVersionContext(context.Background(), db, dialect, m, dir, version)
 }
 
-func (ms MigrationSet) ExecVersionContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
+func (ms *MigrationSet) ExecVersionContext(ctx context.Context, db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) (int, error) {
 	migrations, dbMap, err := ms.PlanMigrationToVersion(db, dialect, m, dir, version)
 	if err != nil {
 		return 0, err
@@ -531,9 +538,11 @@ func (ms MigrationSet) ExecVersionContext(ctx context.Context, db *sql.DB, diale
 }
 
 // Applies the planned migrations and returns the number of applied migrations.
-func (MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
+func (m MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection, migrations []*PlannedMigration, dbMap *gorp.DbMap) (int, error) {
 	applied := 0
 	for _, migration := range migrations {
+		m.logger().Info(ctx, "Applying migration %s", migration.Id)
+
 		var executor SqlExecutor
 		var err error
 
@@ -563,6 +572,8 @@ func (MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection,
 
 		switch dir {
 		case Up:
+			m.logger().Info(ctx, "Migrating up %s", migration.Id)
+
 			err = executor.Insert(&MigrationRecord{
 				Id:        migration.Id,
 				AppliedAt: time.Now(),
@@ -575,6 +586,8 @@ func (MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection,
 				return applied, newTxError(migration, err)
 			}
 		case Down:
+			m.logger().Info(ctx, "Migrating down %s", migration.Id)
+
 			_, err := executor.Delete(&MigrationRecord{
 				Id: migration.Id,
 			})
@@ -590,12 +603,16 @@ func (MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection,
 		}
 
 		if trans, ok := executor.(*gorp.Transaction); ok {
+			m.logger().Info(ctx, "Committing transaction for %s", migration.Id)
+
 			if err := trans.Commit(); err != nil {
 				return applied, newTxError(migration, err)
 			}
 		}
 
 		applied++
+
+		m.logger().Info(ctx, "Applied %d/%d migrations", applied, len(migrations))
 	}
 
 	return applied, nil
@@ -612,17 +629,17 @@ func PlanMigrationToVersion(db *sql.DB, dialect string, m MigrationSource, dir M
 }
 
 // Plan a migration.
-func (ms MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
+func (ms *MigrationSet) PlanMigration(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int) ([]*PlannedMigration, *gorp.DbMap, error) {
 	return ms.planMigrationCommon(db, dialect, m, dir, max, -1)
 }
 
 // Plan a migration to version.
-func (ms MigrationSet) PlanMigrationToVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+func (ms *MigrationSet) PlanMigrationToVersion(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
 	return ms.planMigrationCommon(db, dialect, m, dir, 0, version)
 }
 
 // A common method to plan a migration.
-func (ms MigrationSet) planMigrationCommon(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
+func (ms *MigrationSet) planMigrationCommon(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirection, max int, version int64) ([]*PlannedMigration, *gorp.DbMap, error) {
 	dbMap, err := ms.getMigrationDbMap(db, dialect)
 	if err != nil {
 		return nil, nil, err
@@ -822,7 +839,7 @@ func GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error)
 	return migSet.GetMigrationRecords(db, dialect)
 }
 
-func (ms MigrationSet) GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error) {
+func (ms *MigrationSet) GetMigrationRecords(db *sql.DB, dialect string) ([]*MigrationRecord, error) {
 	dbMap, err := ms.getMigrationDbMap(db, dialect)
 	if err != nil {
 		return nil, err
@@ -838,7 +855,14 @@ func (ms MigrationSet) GetMigrationRecords(db *sql.DB, dialect string) ([]*Migra
 	return records, nil
 }
 
-func (ms MigrationSet) getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
+func (ms *MigrationSet) logger() Logger {
+	if migSet.Logger == nil {
+		migSet.Logger = log.NewDefaultLogger()
+	}
+	return migSet.Logger
+}
+
+func (ms *MigrationSet) getMigrationDbMap(db *sql.DB, dialect string) (*gorp.DbMap, error) {
 	d, ok := MigrationDialects[dialect]
 	if !ok {
 		return nil, fmt.Errorf("Unknown dialect: %s", dialect)
