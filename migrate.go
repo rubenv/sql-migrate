@@ -3,6 +3,7 @@ package migrate
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"database/sql"
 	"embed"
 	"errors"
@@ -125,9 +126,10 @@ func SetIgnoreUnknown(v bool) {
 }
 
 type Migration struct {
-	Id   string
-	Up   []string
-	Down []string
+	Id       string
+	Checksum string
+	Up       []string
+	Down     []string
 
 	DisableTransactionUp   bool
 	DisableTransactionDown bool
@@ -178,6 +180,7 @@ func (b byId) Less(i, j int) bool { return b[i].Less(b[j]) }
 
 type MigrationRecord struct {
 	Id        string    `db:"id"`
+	Checksum  string    `db:"checksum"`
 	AppliedAt time.Time `db:"applied_at"`
 }
 
@@ -420,6 +423,13 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 		Id: id,
 	}
 
+	hash := sha256.New()
+	if _, err := io.Copy(hash, r); err != nil {
+		return nil, fmt.Errorf("Error computing migration checksum (%s): %w", id, err)
+	}
+
+	m.Checksum = fmt.Sprintf("%x", hash.Sum(nil))
+
 	parsed, err := sqlparse.ParseMigration(r)
 	if err != nil {
 		return nil, fmt.Errorf("Error parsing migration (%s): %w", id, err)
@@ -565,6 +575,7 @@ func (MigrationSet) applyMigrations(ctx context.Context, dir MigrationDirection,
 		case Up:
 			err = executor.Insert(&MigrationRecord{
 				Id:        migration.Id,
+				Checksum:  migration.Checksum,
 				AppliedAt: time.Now(),
 			})
 			if err != nil {
@@ -643,7 +654,8 @@ func (ms MigrationSet) planMigrationCommon(db *sql.DB, dialect string, m Migrati
 	var existingMigrations []*Migration
 	for _, migrationRecord := range migrationRecords {
 		existingMigrations = append(existingMigrations, &Migration{
-			Id: migrationRecord.Id,
+			Id:       migrationRecord.Id,
+			Checksum: migrationRecord.Checksum,
 		})
 	}
 	sort.Sort(byId(existingMigrations))
@@ -651,13 +663,18 @@ func (ms MigrationSet) planMigrationCommon(db *sql.DB, dialect string, m Migrati
 	// Make sure all migrations in the database are among the found migrations which
 	// are to be applied.
 	if !ms.IgnoreUnknown {
-		migrationsSearch := make(map[string]struct{})
+		migrationsSearch := make(map[string]string)
 		for _, migration := range migrations {
-			migrationsSearch[migration.Id] = struct{}{}
+			migrationsSearch[migration.Id] = migration.Checksum
 		}
 		for _, existingMigration := range existingMigrations {
-			if _, ok := migrationsSearch[existingMigration.Id]; !ok {
+			plannedMigrationChecksum, ok := migrationsSearch[existingMigration.Id]
+			if !ok {
 				return nil, nil, newPlanError(existingMigration, "unknown migration in database")
+			}
+			// Check if the checksums match if exists, otherwise ignore for backward compatibility
+			if existingMigration.Checksum != "" && existingMigration.Checksum != plannedMigrationChecksum {
+				return nil, nil, newPlanError(existingMigration, "wrong migration checksum")
 			}
 		}
 	}
@@ -745,6 +762,7 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 
 		err = executor.Insert(&MigrationRecord{
 			Id:        migration.Id,
+			Checksum:  migration.Checksum,
 			AppliedAt: time.Now(),
 		})
 		if err != nil {
