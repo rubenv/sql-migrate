@@ -14,12 +14,12 @@ jobs:
         goarch: [amd64]
     steps:
       - name: Checkout
-        uses: actions/checkout@v2
-      - uses: wangyoucao577/go-release-action@v1.38
+        uses: actions/checkout@v4
+      - uses: wangyoucao577/go-release-action@v1.53
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           goos: ${{ matrix.goos }}
           goarch: ${{ matrix.goarch }}
-          goversion: 1.20
+          goversion: 1.23
           pre_command: export CGO_ENABLED=0
           project_path: "./sql-migrate"
