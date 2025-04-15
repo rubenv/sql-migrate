@@ -1,0 +1,37 @@
+# yaml-language-server: $schema=https://goreleaser.com/static/schema.json
+version: 2
+
+builds:
+  - binary: sql-migrate
+    main: ./sql-migrate/main.go
+    goos:
+      - darwin
+      - linux
+    goarch:
+      - '386'
+      - amd64
+      - arm64
+    goarm:
+      - '6'
+    ignore:
+      - goos: darwin
+        goarch: '386'
+    env:
+      - CGO_ENABLED=0
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+
+gomod:
+  proxy: true
+
+archives:
+  - name_template: "{{.Binary}}_{{ .Version }}_{{.Os}}_{{.Arch}}"
+    files:
+      - README.md
+      - LICENSE
+
+release:
+  draft: false
