@@ -36,9 +36,9 @@ jobs:
           cache: true
           cache-dependency-path: go.sum
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
-          version: v1.64
+          version: v2
       - name: go mod tidy
         run: go mod tidy
       - name: check for any changes

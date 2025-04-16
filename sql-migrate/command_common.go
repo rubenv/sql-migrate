@@ -62,17 +62,18 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, ver
 }
 
 func PrintMigration(m *migrate.PlannedMigration, dir migrate.MigrationDirection) {
-	if dir == migrate.Up {
+	switch dir {
+	case migrate.Up:
 		ui.Output(fmt.Sprintf("==> Would apply migration %s (up)", m.Id))
 		for _, q := range m.Up {
 			ui.Output(q)
 		}
-	} else if dir == migrate.Down {
+	case migrate.Down:
 		ui.Output(fmt.Sprintf("==> Would apply migration %s (down)", m.Id))
 		for _, q := range m.Down {
 			ui.Output(q)
 		}
-	} else {
+	default:
 		panic("Not reached")
 	}
 }
