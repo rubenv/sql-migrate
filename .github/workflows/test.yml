@@ -38,7 +38,7 @@ jobs:
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2
+          version: v2.1
       - name: go mod tidy
         run: go mod tidy
       - name: check for any changes
