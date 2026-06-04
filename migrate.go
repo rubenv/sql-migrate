@@ -435,9 +435,9 @@ func ParseMigration(id string, r io.ReadSeeker) (*Migration, error) {
 }
 
 type SqlExecutor interface {
-	Exec(query string, args ...interface{}) (sql.Result, error)
-	Insert(list ...interface{}) error
-	Delete(list ...interface{}) (int64, error)
+	Exec(query string, args ...any) (sql.Result, error)
+	Insert(list ...any) error
+	Delete(list ...any) (int64, error)
 }
 
 // Execute a set of migrations
