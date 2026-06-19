@@ -7,3 +7,5 @@
 /test.db
 .vscode/
 bin/
+
+integration_test_build*

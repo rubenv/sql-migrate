@@ -13,13 +13,14 @@ import (
 
 	migrate "github.com/rubenv/sql-migrate"
 
+	_ "github.com/glebarez/go-sqlite"
 	_ "github.com/go-sql-driver/mysql"
 	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
 )
 
 var dialects = map[string]gorp.Dialect{
 	"sqlite3":  gorp.SqliteDialect{},
+	"sqlite":   gorp.SqliteDialect{},
 	"postgres": gorp.PostgresDialect{},
 	"mysql":    gorp.MySQLDialect{Engine: "InnoDB", Encoding: "UTF8"},
 }
@@ -96,18 +97,22 @@ func GetEnvironment() (*Environment, error) {
 }
 
 func GetConnection(env *Environment) (*sql.DB, string, error) {
-	db, err := sql.Open(env.Dialect, env.DataSource)
+	dialect := env.Dialect
+	if dialect == "sqlite3" {
+		dialect = "sqlite"
+	}
+	db, err := sql.Open(dialect, env.DataSource)
 	if err != nil {
 		return nil, "", fmt.Errorf("Cannot connect to database: %w", err)
 	}
 
 	// Make sure we only accept dialects that were compiled in.
-	_, exists := dialects[env.Dialect]
+	_, exists := dialects[dialect]
 	if !exists {
 		return nil, "", fmt.Errorf("Unsupported dialect: %s", env.Dialect)
 	}
 
-	return db, env.Dialect, nil
+	return db, dialect, nil
 }
 
 // GetVersion returns the version.

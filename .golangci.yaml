@@ -28,7 +28,7 @@ linters:
             - github.com/go-sql-driver/mysql
             - github.com/go-gorp/gorp/v3
             - github.com/lib/pq
-            - github.com/mattn/go-sqlite3
+            - github.com/glebarez/go-sqlite
             - github.com/mitchellh/cli
             - github.com/olekukonko/tablewriter
             - github.com/rubenv/sql-migrate

@@ -11,7 +11,7 @@ import (
 	//revive:disable-next-line:dot-imports
 	. "gopkg.in/check.v1"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/glebarez/go-sqlite"
 )
 
 var sqliteMigrations = []*Migration{
