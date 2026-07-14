@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -61,6 +62,57 @@ func (s *SqliteMigrateSuite) TestRunMigration(c *C) {
 	n, err = Exec(s.Db, "sqlite3", migrations, Up)
 	c.Assert(err, IsNil)
 	c.Assert(n, Equals, 0)
+}
+
+type memoryLogger struct {
+	logs []string
+}
+
+func (l *memoryLogger) appendLogWithLevel(level string, format string, args ...interface{}) {
+	l.logs = append(l.logs, fmt.Sprintf("%s:%s", level, fmt.Sprintf(format, args...)))
+}
+
+func (l *memoryLogger) Info(_ context.Context, format string, args ...interface{}) {
+	l.appendLogWithLevel("INFO", format, args...)
+}
+
+func (l *memoryLogger) Warn(_ context.Context, format string, args ...interface{}) {
+	l.appendLogWithLevel("WARN", format, args...)
+}
+
+func (l *memoryLogger) Error(_ context.Context, format string, args ...interface{}) {
+	l.appendLogWithLevel("ERROR", format, args...)
+}
+
+func (s *SqliteMigrateSuite) TestRunMigrationWithLogger(c *C) {
+	logger := &memoryLogger{}
+	SetLogger(logger)
+
+	migrations := &MemoryMigrationSource{
+		Migrations: sqliteMigrations,
+	}
+
+	// Execute migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, len(sqliteMigrations))
+
+	// Can use table now
+	_, err = s.DbMap.Exec("SELECT * FROM people")
+	c.Assert(err, IsNil)
+
+	// Check logs
+	c.Assert(logger.logs, HasLen, 8)
+	c.Assert(logger.logs, Equals, []string{
+		"INFO:Applying migration 123",
+		"INFO:Migrating up 123",
+		"INFO:Committing transaction for 123",
+		"INFO:Applied 1/2 migrations",
+		"INFO:Applying migration 124",
+		"INFO:Migrating up 124",
+		"INFO:Committing transaction for 124",
+		"INFO:Applied 2/2 migrations",
+	})
 }
 
 func (s *SqliteMigrateSuite) TestRunMigrationEscapeTable(c *C) {
