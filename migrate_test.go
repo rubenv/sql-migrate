@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"embed"
 	"net/http"
+	"path/filepath"
 	"time"
 
 	"github.com/go-gorp/gorp/v3"
@@ -128,6 +129,39 @@ func (s *SqliteMigrateSuite) TestFileMigrate(c *C) {
 	id, err := s.DbMap.SelectInt("SELECT id FROM people")
 	c.Assert(err, IsNil)
 	c.Assert(id, Equals, int64(1))
+}
+
+func (s *SqliteMigrateSuite) TestRecursiveFileMigrate(c *C) {
+	migrations := &RecursiveFileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Executes two migrations
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 4)
+
+	// Has data
+	id, err := s.DbMap.SelectInt("SELECT id FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(id, Equals, int64(1))
+
+	name, err := s.DbMap.SelectStr("SELECT name FROM people")
+	c.Assert(err, IsNil)
+	c.Assert(name, Equals, "test")
+}
+
+func (s *SqliteMigrateSuite) TestMakeFileMigrationSource(c *C) {
+	{
+		dir := filepath.Join("aaa", "bbb", "ccc")
+		got := MakeFileMigrationSource(dir)
+		c.Assert(got, Equals, FileMigrationSource{Dir: dir})
+	}
+	{
+		dir := filepath.Join("aaa", "bbb", "*")
+		got := MakeFileMigrationSource(dir)
+		c.Assert(got, Equals, RecursiveFileMigrationSource{Dir: filepath.Join("aaa", "bbb")})
+	}
 }
 
 func (s *SqliteMigrateSuite) TestHttpFileSystemMigrate(c *C) {

@@ -18,9 +18,7 @@ func ApplyMigrations(dir migrate.MigrationDirection, dryrun bool, limit int, ver
 	}
 	defer db.Close()
 
-	source := migrate.FileMigrationSource{
-		Dir: env.Dir,
-	}
+	source := migrate.MakeFileMigrationSource(env.Dir)
 
 	if dryrun {
 		var migrations []*migrate.PlannedMigration

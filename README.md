@@ -61,6 +61,8 @@ production:
   table: migrations
 ```
 
+To process only the specified directory, set `dir: migrations/sqlite3`, to process the specified directory and all of its subdirectories recursively, set `dir: migrations/sqlite3/*`.
+
 (See more examples for different set ups [here](test-integration/dbconfig.yml))
 
 Also one can obtain env variables in datasource field via `os.ExpandEnv` embedded call for the field.

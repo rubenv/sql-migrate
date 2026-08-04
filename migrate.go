@@ -8,9 +8,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
@@ -298,6 +300,80 @@ func migrationFromFile(dir http.FileSystem, root string, info os.FileInfo) (*Mig
 		return nil, fmt.Errorf("Error while parsing %s: %w", info.Name(), err)
 	}
 	return migration, nil
+}
+
+type RecursiveFileMigrationSource struct {
+	Dir string
+}
+
+var _ MigrationSource = (*RecursiveFileMigrationSource)(nil)
+
+func (r RecursiveFileMigrationSource) FindMigrations() ([]*Migration, error) {
+	dirfs := os.DirFS(r.Dir)
+	migrationIDs := make(map[string]string)
+	var migrations []*Migration
+	if err := fs.WalkDir(dirfs, ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return fmt.Errorf("Error while walkdir %s: %w", path, err)
+		}
+		if d.IsDir() {
+			return nil
+		}
+
+		migrationID := d.Name()
+		if existPath, exist := migrationIDs[migrationID]; exist {
+			return fmt.Errorf("duplicate ID '%s' found in both path %s and path %s", migrationID, existPath, path)
+		}
+		migrationIDs[migrationID] = path
+
+		migration, err := migrationFromFS(dirfs, migrationID, path)
+		if err != nil {
+			return err
+		}
+		migrations = append(migrations, migration)
+		return nil
+	}); err != nil {
+		return nil, err
+	}
+
+	// Make sure migrations are sorted
+	sort.Sort(byId(migrations))
+
+	return migrations, nil
+}
+
+func migrationFromFS(dirfs fs.FS, migrationID, path string) (*Migration, error) {
+	file, err := dirfs.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("Error while opening %s: %w", path, err)
+	}
+	defer func() { _ = file.Close() }()
+
+	rs, ok := file.(io.ReadSeeker)
+	if !ok {
+		data, err := io.ReadAll(file)
+		if err != nil {
+			return nil, fmt.Errorf("Error while read file %s: %w", path, err)
+		}
+		rs = io.NewSectionReader(bytes.NewReader(data), 0, int64(len(data)))
+	}
+	migration, err := ParseMigration(migrationID, rs)
+	if err != nil {
+		return nil, fmt.Errorf("Error while parsing %s: %w", path, err)
+	}
+
+	return migration, nil
+}
+
+func MakeFileMigrationSource(dir string) MigrationSource {
+	if _, last := filepath.Split(dir); last == "*" {
+		return RecursiveFileMigrationSource{
+			Dir: filepath.Dir(dir),
+		}
+	}
+	return FileMigrationSource{
+		Dir: dir,
+	}
 }
 
 // Migrations from a bindata asset set.
