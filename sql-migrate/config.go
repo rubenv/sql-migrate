@@ -58,6 +58,8 @@ func ReadConfig() (map[string]*Environment, error) {
 	return config, nil
 }
 
+// GetEnvironment returns the current environment configuration.
+// This function is now exported for library use.
 func GetEnvironment() (*Environment, error) {
 	config, err := ReadConfig()
 	if err != nil {

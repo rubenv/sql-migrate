@@ -74,35 +74,39 @@ func (c *StatusCommand) Run(args []string) int {
 	table.SetHeader([]string{"Migration", "Applied"})
 	table.SetColWidth(60)
 
-	rows := make(map[string]*statusRow)
-
+	// Build a map of source migrations for quick lookup
+	sourceMigrations := make(map[string]*migrate.Migration)
 	for _, m := range migrations {
-		rows[m.Id] = &statusRow{
-			Id:       m.Id,
-			Migrated: false,
-		}
+		sourceMigrations[m.Id] = m
 	}
 
-	for _, r := range records {
-		if rows[r.Id] == nil {
-			ui.Warn(fmt.Sprintf("Could not find migration file: %v", r.Id))
-			continue
-		}
-
-		rows[r.Id].Migrated = true
-		rows[r.Id].AppliedAt = r.AppliedAt
+	// Build a map of applied migrations for quick lookup
+	applied := make(map[string]*migrate.MigrationRecord)
+	for _, m := range records {
+		applied[m.Id] = m
 	}
 
+	// Print status for all migrations in the source
 	for _, m := range migrations {
-		if rows[m.Id] != nil && rows[m.Id].Migrated {
+		if rec, ok := applied[m.Id]; ok {
 			table.Append([]string{
 				m.Id,
-				rows[m.Id].AppliedAt.String(),
+				rec.AppliedAt.Format(time.RFC3339),
 			})
 		} else {
 			table.Append([]string{
 				m.Id,
 				"no",
+			})
+		}
+	}
+
+	// Print status for migrations in DB but not in source
+	for _, m := range records {
+		if _, ok := sourceMigrations[m.Id]; !ok {
+			table.Append([]string{
+				m.Id,
+				fmt.Sprintf("yes (missing in source, applied at %s)", m.AppliedAt.Format(time.RFC3339)),
 			})
 		}
 	}

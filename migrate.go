@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/go-gorp/gorp/v3"
+	"gopkg.in/yaml.v2"
 
 	"github.com/rubenv/sql-migrate/sqlparse"
 )
@@ -766,6 +767,58 @@ func SkipMax(db *sql.DB, dialect string, m MigrationSource, dir MigrationDirecti
 	}
 
 	return applied, nil
+}
+
+// EnvironmentConfig holds the configuration for a database environment
+type EnvironmentConfig struct {
+	Dialect       string
+	DataSource    string
+	Dir           string
+	TableName     string
+	SchemaName    string
+	IgnoreUnknown bool
+}
+
+// GetEnvironmentFromConfig creates an environment configuration from provided config data
+// This allows users to access environment configuration functionality from the library
+// without depending on the command-line tool's config.go implementation.
+func GetEnvironmentFromConfig(configData []byte, environment string) (*EnvironmentConfig, error) {
+	config := make(map[string]*EnvironmentConfig)
+	
+	err := yaml.Unmarshal(configData, config)
+	if err != nil {
+		return nil, fmt.Errorf("failed to unmarshal config: %w", err)
+	}
+
+	env := config[environment]
+	if env == nil {
+		return nil, fmt.Errorf("no environment found: %s", environment)
+	}
+
+	if env.Dialect == "" {
+		return nil, errors.New("no dialect specified")
+	}
+
+	if env.DataSource == "" {
+		return nil, errors.New("no data source specified")
+	}
+	env.DataSource = os.ExpandEnv(env.DataSource)
+
+	if env.Dir == "" {
+		env.Dir = "migrations"
+	}
+
+	if env.TableName != "" {
+		SetTable(env.TableName)
+	}
+
+	if env.SchemaName != "" {
+		SetSchema(env.SchemaName)
+	}
+
+	SetIgnoreUnknown(env.IgnoreUnknown)
+
+	return env, nil
 }
 
 // Filter a slice of migrations into ones that should be applied.

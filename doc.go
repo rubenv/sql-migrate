@@ -1,6 +1,13 @@
 /*
 SQL Schema migration tool for Go.
 
+The package provides functions for parsing and executing database migrations,
+as well as utilities for working with configuration settings:
+
+  - Functions to set migration table name and schema
+  - GetEnvironmentFromConfig for loading environment configuration from YAML
+  - Migration runners for up/down migrations
+
 Key features:
 
   - Usable as a CLI tool or as a library
