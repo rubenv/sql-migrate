@@ -536,6 +536,47 @@ func (s *SqliteMigrateSuite) TestPlanMigrationWithUnknownDatabaseMigrationApplie
 	c.Assert(err, FitsTypeOf, &PlanError{})
 }
 
+func (s *SqliteMigrateSuite) TestPlanMigrationWithMigrationWithDifferentCheckSumApplied(c *C) {
+	migrations := &MemoryMigrationSource{
+		Migrations: []*Migration{
+			{
+				Id:       "1_create_table.sql",
+				Checksum: "123",
+				Up:       []string{"CREATE TABLE people (id int)"},
+				Down:     []string{"DROP TABLE people"},
+			},
+			{
+				Id:       "2_alter_table.sql",
+				Checksum: "345",
+				Up:       []string{"ALTER TABLE people ADD COLUMN first_name text"},
+				Down:     []string{"SELECT 0"}, // Not really supported
+			},
+			{
+				Id:       "10_add_last_name.sql",
+				Checksum: "567",
+				Up:       []string{"ALTER TABLE people ADD COLUMN last_name text"},
+				Down:     []string{"ALTER TABLE people DROP COLUMN last_name"},
+			},
+		},
+	}
+	n, err := Exec(s.Db, "sqlite3", migrations, Up)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 3)
+
+	// Change the checksum of the migration so that it doesn't match the one in the database
+	migrations.Migrations[1].Checksum = "222"
+
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Up, 0)
+	c.Assert(err, NotNil, Commentf("Up migrations should not have been applied when there "+
+		"is checksum missmatch"))
+	c.Assert(err, FitsTypeOf, &PlanError{})
+
+	_, _, err = PlanMigration(s.Db, "sqlite3", migrations, Down, 0)
+	c.Assert(err, NotNil, Commentf("Down migrations should not have been applied when there "+
+		"is checksum missmatch"))
+	c.Assert(err, FitsTypeOf, &PlanError{})
+}
+
 func (s *SqliteMigrateSuite) TestPlanMigrationWithIgnoredUnknownDatabaseMigrationApplied(c *C) {
 	migrations := &MemoryMigrationSource{
 		Migrations: []*Migration{
