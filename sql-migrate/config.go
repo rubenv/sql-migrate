@@ -27,11 +27,13 @@ var dialects = map[string]gorp.Dialect{
 var (
 	ConfigFile        string
 	ConfigEnvironment string
+	OutputFormat      string
 )
 
 func ConfigFlags(f *flag.FlagSet) {
 	f.StringVar(&ConfigFile, "config", "dbconfig.yml", "Configuration file to use.")
 	f.StringVar(&ConfigEnvironment, "env", "development", "Environment to use.")
+	f.StringVar(&OutputFormat, "output", "table", "Output format.")
 }
 
 type Environment struct {

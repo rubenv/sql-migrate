@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"os"
@@ -14,6 +15,12 @@ import (
 
 type StatusCommand struct{}
 
+type statusRow struct {
+	Id        string
+	Migrated  bool
+	AppliedAt time.Time
+}
+
 func (*StatusCommand) Help() string {
 	helpText := `
 Usage: sql-migrate status [options] ...
@@ -24,6 +31,7 @@ Options:
 
   -config=dbconfig.yml   Configuration file to use.
   -env="development"     Environment.
+  -output="json"         Print output in JSON format (default is table format).
 
 `
 	return strings.TrimSpace(helpText)
@@ -70,10 +78,21 @@ func (c *StatusCommand) Run(args []string) int {
 		return 1
 	}
 
-	table := tablewriter.NewWriter(os.Stdout)
-	table.SetHeader([]string{"Migration", "Applied"})
-	table.SetColWidth(60)
+	statusRows := buildStatusRows(migrations, records)
 
+	if OutputFormat == "json" {
+		if err := printStatusJSON(statusRows); err != nil {
+			ui.Error(fmt.Sprintf("Could not encode JSON: %s", err))
+			return 1
+		}
+	} else {
+		printStatusTable(statusRows)
+	}
+
+	return 0
+}
+
+func buildStatusRows(migrations []*migrate.Migration, records []*migrate.MigrationRecord) []*statusRow {
 	rows := make(map[string]*statusRow)
 
 	for _, m := range migrations {
@@ -84,36 +103,60 @@ func (c *StatusCommand) Run(args []string) int {
 	}
 
 	for _, r := range records {
-		if rows[r.Id] == nil {
+		if row, ok := rows[r.Id]; ok {
+			row.Migrated = true
+			row.AppliedAt = r.AppliedAt
+		} else {
 			ui.Warn(fmt.Sprintf("Could not find migration file: %v", r.Id))
-			continue
 		}
-
-		rows[r.Id].Migrated = true
-		rows[r.Id].AppliedAt = r.AppliedAt
 	}
 
+	var result []*statusRow
 	for _, m := range migrations {
-		if rows[m.Id] != nil && rows[m.Id].Migrated {
-			table.Append([]string{
-				m.Id,
-				rows[m.Id].AppliedAt.String(),
-			})
-		} else {
-			table.Append([]string{
-				m.Id,
-				"no",
-			})
+		result = append(result, rows[m.Id])
+	}
+	return result
+}
+
+func printStatusJSON(rows []*statusRow) error {
+	type jsonRow struct {
+		Migration string `json:"migration"`
+		Applied   string `json:"applied"`
+	}
+
+	var output []jsonRow
+	for _, r := range rows {
+		applied := "no"
+		if r.Migrated {
+			applied = r.AppliedAt.Format(time.RFC3339)
 		}
+		output = append(output, jsonRow{
+			Migration: r.Id,
+			Applied:   applied,
+		})
+	}
+
+	data, err := json.MarshalIndent(output, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(data))
+	return nil
+}
+
+func printStatusTable(rows []*statusRow) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"Migration", "Applied"})
+	table.SetColWidth(60)
+
+	for _, r := range rows {
+		applied := "no"
+		if r.Migrated {
+			applied = r.AppliedAt.Format("2006-01-02 15:04:05")
+		}
+		table.Append([]string{r.Id, applied})
 	}
 
 	table.Render()
-
-	return 0
-}
-
-type statusRow struct {
-	Id        string
-	Migrated  bool
-	AppliedAt time.Time
 }
