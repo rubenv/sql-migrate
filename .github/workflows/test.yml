@@ -9,7 +9,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go-version: ["1.23", "1.24"]
+        go-version: ["1.24", "1.25"]
     runs-on: ubuntu-latest
     steps:
       - name: checkout
@@ -32,13 +32,13 @@ jobs:
       - name: setup-go
         uses: actions/setup-go@v5
         with:
-          go-version: "1.24"
+          go-version: "1.25"
           cache: true
           cache-dependency-path: go.sum
       - name: golangci-lint
         uses: golangci/golangci-lint-action@v7
         with:
-          version: v2.1
+          version: v2.5
       - name: go mod tidy
         run: go mod tidy
       - name: check for any changes
@@ -52,7 +52,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        go-version: ["1.23", "1.24"]
+        go-version: ["1.24", "1.25"]
     services:
       mysql:
         image: mysql:8.0
