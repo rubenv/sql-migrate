@@ -229,6 +229,22 @@ func (s *SqliteMigrateSuite) TestMigrateVersionIntFailedWithInvalidVerion(c *C) 
 	c.Assert(err, NotNil)
 }
 
+func (s *SqliteMigrateSuite) TestMigrateVersionIntAlreadyAtVersion(c *C) {
+	migrations := &FileMigrationSource{
+		Dir: "test-migrations",
+	}
+
+	// Migrate up to the latest version.
+	n, err := ExecVersion(s.Db, "sqlite3", migrations, Up, 2)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 2)
+
+	// Requesting the same version again has nothing to apply and must not error.
+	n, err = ExecVersion(s.Db, "sqlite3", migrations, Up, 2)
+	c.Assert(err, IsNil)
+	c.Assert(n, Equals, 0)
+}
+
 func (s *SqliteMigrateSuite) TestMigrateDown(c *C) {
 	migrations := &FileMigrationSource{
 		Dir: "test-migrations",
