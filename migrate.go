@@ -680,7 +680,9 @@ func (ms MigrationSet) planMigrationCommon(db *sql.DB, dialect string, m Migrati
 	toApply := ToApply(migrations, record.Id, dir)
 	toApplyCount := len(toApply)
 
-	if version >= 0 {
+	// When a target version is requested but there are no migrations left to
+	// apply, we are already at that version, so there is nothing to do.
+	if version >= 0 && len(toApply) > 0 {
 		targetIndex := 0
 		for targetIndex < len(toApply) {
 			tempVersion := toApply[targetIndex].VersionInt()
